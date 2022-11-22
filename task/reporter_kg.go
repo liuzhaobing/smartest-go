@@ -5,7 +5,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
 	"smartest-go/pkg/logf"
-	"strings"
 )
 
 func (KG *KGTask) getResultSummary() string {
@@ -30,23 +29,14 @@ func (KG *KGTask) getResultSummary() string {
 }
 
 func (KG *KGTask) sendReport() {
-	if KG.KGConfig.IsReport != "yes" || KG.KGConfig.ReportString == "" {
+	if KG.KGConfig.IsReport != "yes" || KG.KGConfig.ReportString == nil {
 		return
 	}
 	text := KG.getResultSummary()
 	payload := &FeiShu{Payload: &FeiShuPayload{MsgType: "text", Content: &simpleText{Text: text}}}
 
-	if strings.Contains(KG.KGConfig.ReportString, "&&") {
-		urlList := strings.Split(KG.KGConfig.ReportString, "&&")
-		for _, url := range urlList {
-			payload.Url = url
-			err := reportToFeiShu(payload)
-			if err != nil {
-				logf.Error(err)
-			}
-		}
-	} else {
-		payload.Url = KG.KGConfig.ReportString
+	for _, url := range KG.KGConfig.ReportString {
+		payload.Url = url
 		err := reportToFeiShu(payload)
 		if err != nil {
 			logf.Error(err)

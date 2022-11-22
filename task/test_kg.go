@@ -69,7 +69,7 @@ type KGTaskConfig struct {
 	JobInstanceId string   `json:"job_instance_id" form:"job_instance_id"`
 	ChanNum       int      `json:"chan_num" form:"chan_num"`
 	IsReport      string   `json:"is_report" form:"is_report"`
-	ReportString  string   `json:"report_string" form:"report_string"`
+	ReportString  []string `json:"report_string" form:"report_string"`
 	EnvInfo       *EnvInfo `json:"env_info" form:"env_info"`
 	Spaces        []*Space `json:"spaces" form:"spaces"` // [{"space_name":"common_kg_v4"}]
 }

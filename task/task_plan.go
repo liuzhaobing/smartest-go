@@ -30,14 +30,20 @@ type NameOfTask struct {
 }
 
 type AddTask struct {
-	Id             int64           `json:"id,omitempty" form:"id,omitempty"`
-	TaskName       string          `json:"task_name" form:"task_name"`
-	TaskType       string          `json:"task_type" form:"task_type"`
-	TaskGroup      string          `json:"task_group" form:"task_group"`
-	IsCrontab      string          `json:"is_crontab" form:"is_crontab"`
-	CrontabString  string          `json:"crontab_string" form:"crontab_string"`
-	TaskConfig     *TestConfig     `json:"task_config" form:"task_config"`
-	TaskDataSource *TestDataSource `json:"task_data_source" form:"task_data_source"`
+	Id                  int64           `json:"id,omitempty" form:"id,omitempty"`
+	TaskName            string          `json:"task_name" form:"task_name"`
+	TaskType            string          `json:"task_type" form:"task_type"`
+	TaskGroup           string          `json:"task_group" form:"task_group"`
+	IsCrontab           string          `json:"is_crontab" form:"is_crontab"`
+	CrontabString       string          `json:"crontab_string" form:"crontab_string"`
+	TaskDataSourceLabel string          `json:"task_data_source_label" form:"task_data_source_label"`
+	TaskConfig          *TestConfig     `json:"task_config" form:"task_config"`
+	TaskDataSource      *TestDataSource `json:"task_data_source" form:"task_data_source"`
+}
+
+type Excel struct {
+	FileName  string `json:"file_name" form:"file_name"`
+	SheetName string `json:"sheet_name" form:"sheet_name"`
 }
 
 type TestConfig struct {
@@ -47,17 +53,19 @@ type TestConfig struct {
 type TestDataSource struct {
 	TestCaseKG   []*KGTaskReq  `json:"cases_kg,omitempty" form:"cases_kg,omitempty"`   // 知识图谱用例数据
 	KGDataSource *KGDataSource `json:"source_kg,omitempty" form:"source_kg,omitempty"` // 知识图谱用例构造
+	KGExcel      *Excel        `json:"excel_kg,omitempty" form:"excel_kg,omitempty"`   // 知识图谱Excel用例
 }
 
 func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 	// 根据类型 将数据库string类型转换为前端可识别struct
 	s := &AddTask{
-		Id:            j.Id,
-		TaskName:      j.TaskName,
-		TaskType:      j.TaskType,
-		TaskGroup:     j.TaskGroup,
-		IsCrontab:     j.IsCrontab,
-		CrontabString: j.CrontabString,
+		Id:                  j.Id,
+		TaskName:            j.TaskName,
+		TaskType:            j.TaskType,
+		TaskGroup:           j.TaskGroup,
+		IsCrontab:           j.IsCrontab,
+		CrontabString:       j.CrontabString,
+		TaskDataSourceLabel: j.TaskDataSourceLabel,
 	}
 
 	switch j.TaskType {
@@ -68,7 +76,11 @@ func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 			return nil, err
 		}
 
-		s.TaskDataSource = &TestDataSource{TestCaseKG: make([]*KGTaskReq, 0)}
+		s.TaskDataSource = &TestDataSource{
+			TestCaseKG:   make([]*KGTaskReq, 0),
+			KGDataSource: &KGDataSource{},
+			KGExcel:      &Excel{},
+		}
 		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
 		if err != nil {
 			return nil, err
@@ -78,28 +90,26 @@ func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 }
 
 func StructToJson(s *AddTask) (*models.TaskPlanBase, error) {
-	// 根据类型 将前端可识别struct类型转换为数据库string
+	// 将前端可识别struct类型转换为数据库string
 	j := &models.TaskPlanBase{
-		TaskName:      s.TaskName,
-		TaskType:      s.TaskType,
-		TaskGroup:     s.TaskGroup,
-		IsCrontab:     s.IsCrontab,
-		CrontabString: s.CrontabString,
+		TaskName:            s.TaskName,
+		TaskType:            s.TaskType,
+		TaskGroup:           s.TaskGroup,
+		IsCrontab:           s.IsCrontab,
+		CrontabString:       s.CrontabString,
+		TaskDataSourceLabel: s.TaskDataSourceLabel,
 	}
 
-	switch s.TaskType {
-	case KnowledgeGraph:
-		kgConfig, err := json.Marshal(s.TaskConfig)
-		if err != nil {
-			return nil, err
-		}
-		j.TaskConfig = string(kgConfig)
-		kgData, err := json.Marshal(s.TaskDataSource)
-		if err != nil {
-			return nil, err
-		}
-		j.TaskDataSource = string(kgData)
+	Config, err := json.Marshal(s.TaskConfig)
+	if err != nil {
+		return nil, err
 	}
+	j.TaskConfig = string(Config)
+	Data, err := json.Marshal(s.TaskDataSource)
+	if err != nil {
+		return nil, err
+	}
+	j.TaskDataSource = string(Data)
 	return j, nil
 }
 
@@ -363,19 +373,23 @@ func InitTaskModel(config *AddTask) TaskModel {
 	case KnowledgeGraph:
 		var kg TaskModel = &KGTask{}
 		kgConfig := config.TaskConfig.TestConfigKG
-		kgReqs := config.TaskDataSource.TestCaseKG
-		kgDataSource := config.TaskDataSource.KGDataSource
-		if len(kgReqs) != 0 {
-			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, kgReqs, nil)}
-		} else if kgDataSource != nil {
-			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, make([]*KGTaskReq, 0), kgDataSource)}
-		}
 
+		switch config.TaskDataSourceLabel {
+		case KnowledgeGraphSource:
+			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, make([]*KGTaskReq, 0), config.TaskDataSource.KGDataSource)}
+		case KnowledgeGraphCases:
+			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, config.TaskDataSource.TestCaseKG, nil)}
+		case KnowledgeGraphExcel:
+			//	TODO
+		}
 		return kg
 	}
 	return nil
 }
 
 var (
-	KnowledgeGraph = "kg"
+	KnowledgeGraph       = "kg"
+	KnowledgeGraphSource = "source_kg"
+	KnowledgeGraphCases  = "cases_kg"
+	KnowledgeGraphExcel  = "excel_kg"
 )

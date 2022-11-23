@@ -5,14 +5,15 @@ import (
 )
 
 type TaskPlanBase struct {
-	Id             int64  `json:"id"  gorm:"primary_key"    gorm:"column:id"`
-	TaskName       string `json:"task_name"   gorm:"column:task_name"`
-	TaskType       string `json:"task_type"   gorm:"column:task_type"`
-	TaskGroup      string `json:"task_group"   gorm:"column:task_group"`
-	TaskConfig     string `json:"task_config"     gorm:"column:task_config"`
-	TaskDataSource string `json:"task_data_source" gorm:"task_data_source"`
-	IsCrontab      string `json:"is_crontab"   gorm:"is_crontab"` // yes / no
-	CrontabString  string `json:"crontab_string"  gorm:"crontab_string"`
+	Id                  int64  `json:"id"  gorm:"primary_key"    gorm:"column:id"`
+	TaskName            string `json:"task_name"   gorm:"column:task_name"`
+	TaskType            string `json:"task_type"   gorm:"column:task_type"`
+	TaskGroup           string `json:"task_group"   gorm:"column:task_group"`
+	TaskConfig          string `json:"task_config"     gorm:"column:task_config"`
+	TaskDataSource      string `json:"task_data_source" gorm:"column:task_data_source"`
+	TaskDataSourceLabel string `json:"task_data_source_label" gorm:"column:task_data_source_label"`
+	IsCrontab           string `json:"is_crontab"   gorm:"column:is_crontab"` // yes / no
+	CrontabString       string `json:"crontab_string"  gorm:"column:crontab_string"`
 
 	Session *Session `json:"-" gorm:"-"`
 }

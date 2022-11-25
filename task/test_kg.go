@@ -65,13 +65,13 @@ type chatResponse struct {
 }
 
 type KGTaskConfig struct {
-	TaskName      string   `json:"task_name" form:"task_name"`
-	JobInstanceId string   `json:"job_instance_id" form:"job_instance_id"`
-	ChanNum       int      `json:"chan_num" form:"chan_num"`
-	IsReport      string   `json:"is_report" form:"is_report"`
-	ReportString  []string `json:"report_string" form:"report_string"`
-	EnvInfo       *EnvInfo `json:"env_info" form:"env_info"`
-	Spaces        []*Space `json:"spaces" form:"spaces"` // [{"space_name":"common_kg_v4"}]
+	TaskName      string          `json:"task_name" form:"task_name"`
+	JobInstanceId string          `json:"job_instance_id" form:"job_instance_id"`
+	ChanNum       int             `json:"chan_num" form:"chan_num"`
+	IsReport      string          `json:"is_report" form:"is_report"`
+	ReportString  []*ReportString `json:"report_string" form:"report_string"`
+	EnvInfo       *EnvInfo        `json:"env_info" form:"env_info"`
+	Spaces        []*Space        `json:"spaces" form:"spaces"` // [{"space_name":"common_kg_v4"}]
 }
 
 type KGDataSource struct {

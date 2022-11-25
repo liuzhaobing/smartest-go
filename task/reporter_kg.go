@@ -36,7 +36,7 @@ func (KG *KGTask) sendReport() {
 	payload := &FeiShu{Payload: &FeiShuPayload{MsgType: "text", Content: &simpleText{Text: text}}}
 
 	for _, url := range KG.KGConfig.ReportString {
-		payload.Url = url
+		payload.Url = url.Address
 		err := reportToFeiShu(payload)
 		if err != nil {
 			logf.Error(err)

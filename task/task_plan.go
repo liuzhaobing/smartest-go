@@ -50,6 +50,10 @@ type TestConfig struct {
 	TestConfigKG *KGTaskConfig `json:"config_kg,omitempty" form:"config_kg,omitempty"` // 知识图谱
 }
 
+type ReportString struct {
+	Address string `json:"address,omitempty" form:"address,omitempty"`
+}
+
 type TestDataSource struct {
 	TestCaseKG   []*KGTaskReq  `json:"cases_kg,omitempty" form:"cases_kg,omitempty"`   // 知识图谱用例数据
 	KGDataSource *KGDataSource `json:"source_kg,omitempty" form:"source_kg,omitempty"` // 知识图谱用例构造

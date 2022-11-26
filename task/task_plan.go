@@ -228,13 +228,14 @@ func AddPlan(context *gin.Context) {
 
 	// 先在数据库中创建任务
 	id, err := model.AddTaskPlan(&models.TaskPlanBase{
-		TaskName:       q.TaskName,
-		TaskType:       q.TaskType,
-		TaskGroup:      q.TaskGroup,
-		TaskConfig:     q.TaskConfig,
-		TaskDataSource: q.TaskDataSource,
-		IsCrontab:      q.IsCrontab,
-		CrontabString:  q.CrontabString,
+		TaskName:            q.TaskName,
+		TaskType:            q.TaskType,
+		TaskGroup:           q.TaskGroup,
+		TaskConfig:          q.TaskConfig,
+		TaskDataSourceLabel: q.TaskDataSourceLabel,
+		TaskDataSource:      q.TaskDataSource,
+		IsCrontab:           q.IsCrontab,
+		CrontabString:       q.CrontabString,
 	})
 	if err != nil {
 		app.ErrorResp(context, e.ERROR, err.Error(), nil)

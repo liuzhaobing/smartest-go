@@ -22,26 +22,23 @@ var (
 	ontologyRLTable = "ontology_rl"
 )
 
-func (KG *KGTask) CaseGetterKG() {
+func (KG *KGTask) CaseGetterKG(c context.Context) {
 	KG.KGCaseGetterMongo = KG.KGDataSourceConfig.KGDataBase
 	KG.KGCaseGetterMongo.MongoPoolConnect(10000)
 	switch KG.KGDataSourceConfig.CType {
 	case 1:
 		if KG.KGDataSourceConfig.IsRandom == "yes" {
-			KG.fakeQuerySingleStepRandomly()
+			KG.fakeQuerySingleStepRandomly(c)
 		}
 	case 2:
 		if KG.KGDataSourceConfig.IsRandom == "yes" {
-			KG.fakeQueryTwoStepRandomly()
+			KG.fakeQueryTwoStepRandomly(c)
 		}
 	}
 }
 
-func (KG *KGTask) fakeQuerySingleStepRandomly() {
+func (KG *KGTask) fakeQuerySingleStepRandomly(ctx context.Context) {
 	// 抽取关系 从关系表中 随机抽取n条关系
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	caseListRl, _ := KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
 		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum}},
 		{"$match": entityRLFilter}})
@@ -75,7 +72,7 @@ func (KG *KGTask) fakeQuerySingleStepRandomly() {
 		return
 	default:
 		if len(KG.req) < int(KG.KGDataSourceConfig.CaseNum) {
-			KG.fakeQuerySingleStepRandomly()
+			KG.fakeQuerySingleStepRandomly(ctx)
 		}
 	}
 }
@@ -110,10 +107,7 @@ func (KG *KGTask) fakeQuerySingleStep(entityRl *bson.D) (Req *KGTaskReq) {
 	return
 }
 
-func (KG *KGTask) fakeQueryTwoStepRandomly() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+func (KG *KGTask) fakeQueryTwoStepRandomly(ctx context.Context) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(ctx context.Context) {
@@ -142,7 +136,7 @@ func (KG *KGTask) fakeQueryTwoStepRandomly() {
 		return
 	default:
 		if len(KG.req) < int(KG.KGDataSourceConfig.CaseNum) {
-			KG.fakeQueryTwoStepRandomly()
+			KG.fakeQueryTwoStepRandomly(ctx)
 		}
 	}
 }

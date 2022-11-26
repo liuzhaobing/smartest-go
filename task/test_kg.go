@@ -150,24 +150,25 @@ func NewKGTask(kg *KGTaskConfig, req []*KGTaskReq, kgDataSourceConfig *KGDataSou
 }
 
 func (KG *KGTask) pre() {
-	success, value := PrepareMissionFlag(KG.KGConfig.TaskName)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	success, value := PrepareMissionFlag(KG.KGConfig.TaskName, cancel)
 	if !success {
 		return
 	}
-	// 需要先把用例放在 KG.req 如果非前端传递用例 则调用方法收集用例
-	if len(KG.req) == 0 || KG.KGDataSourceConfig != nil {
-		KG.CaseGetterKG()
-	}
-
-	KG.RespChan = make(chan *KGTaskOnceResp, len(KG.req))
-	KG.chanNum = KG.KGConfig.ChanNum
-	KG.starTime = time.Now()
-
 	if KG.KGConfig.JobInstanceId == "" {
 		KG.KGConfig.JobInstanceId = uuid.New().String()
 	}
 	value.TaskType = KnowledgeGraph
 	value.JobInstanceId = KG.KGConfig.JobInstanceId
+
+	// 需要先把用例放在 KG.req 如果非前端传递用例 则调用方法收集用例
+	if len(KG.req) == 0 || KG.KGDataSourceConfig != nil {
+		KG.CaseGetterKG(ctx)
+	}
+	KG.RespChan = make(chan *KGTaskOnceResp, len(KG.req))
+	KG.chanNum = KG.KGConfig.ChanNum
+	KG.starTime = time.Now()
 }
 
 func (KG *KGTask) run() {

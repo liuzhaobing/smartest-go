@@ -148,8 +148,13 @@ func statusFromDB(req *TaskInfo, tempTaskInfoMap map[string]*TaskInfo) {
 */
 
 // PrepareMissionFlag 任务准备时 保存记录  //512准备中 -> 256执行中 -> 128已停止 -> 64失败 -> 32成功
-func PrepareMissionFlag(taskName string) (bool, *TaskInfo) {
-	thisTaskInfo := &TaskInfo{Name: taskName, Status: 512, Message: "任务准备中!", StartTime: time.Now().Format("2006-01-02 15:04:05")}
+func PrepareMissionFlag(taskName string, c context.CancelFunc) (bool, *TaskInfo) {
+	thisTaskInfo := &TaskInfo{
+		Name:      taskName,
+		Status:    512,
+		Message:   "任务准备中!",
+		StartTime: time.Now().Format("2006-01-02 15:04:05"),
+		Cancel:    c}
 
 	if value, ok := taskInfoMap[taskName]; ok && value.Status == 256 { // 执行中的任务不允许再次发起 pre()
 		return false, value
@@ -176,12 +181,12 @@ func RunMissionFlag(taskName string) (bool, *TaskInfo) {
 // EndMissionFlag 任务完成时 保存记录  //512准备中 -> 256执行中 -> 128已停止 -> 64失败 -> 32成功
 func EndMissionFlag(taskName string) (success bool, info *TaskInfo) {
 	value, ok := taskInfoMap[taskName]
-
 	if ok && value.Status == 256 { // 只有执行中的任务才能结束 end()
 		value.Status = 32
 		value.Message = "任务执行结束!"
 		value.EndTime = time.Now().Format("2006-01-02 15:04:05")
 		models.ReporterDB.MongoInsertOne(TasksTable, value)
+		delete(taskInfoMap, taskName)
 		finalResult, _ := json.Marshal(value)
 		fmt.Println(string(finalResult))
 		return true, value
@@ -195,12 +200,13 @@ func EndMissionFlag(taskName string) (success bool, info *TaskInfo) {
 // TerminateMissionFlag 任务手动停止时 更新记录  //512准备中 -> 256执行中 -> 128已停止 -> 64失败 -> 32成功
 func TerminateMissionFlag(taskName string) (success bool, info *TaskInfo) {
 	value, ok := taskInfoMap[taskName]
-	if ok && value.Status == 256 {
+	if ok && (value.Status == 256 || value.Status == 512) {
 		value.Cancel()
 		value.Message = "任务停止成功!"
 		value.Status = 128
 		value.EndTime = time.Now().Format("2006-01-02 15:04:05")
 		models.ReporterDB.MongoInsertOne(TasksTable, value)
+		delete(taskInfoMap, taskName)
 		finalResult, _ := json.Marshal(value)
 		fmt.Println(string(finalResult))
 		return true, value

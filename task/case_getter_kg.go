@@ -280,13 +280,14 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req *KGTaskReq) {
 	// 随机抽一条模板出来
 	Relation1, Relation2, Query, ExpectAnswer := KG.returnOneTemplate(KG.KGDataSourceConfig.TemplateJson)
 
+	nu := 20
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
 		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum}},
 		{"$match": bson.M{"name": Relation1}}})
 
 	// 遍历关系1的ids
-	for _, Relation1ID := range Relation1IDs {
+	for _, Relation1ID := range returnNumSlice(nu, Relation1IDs) {
 
 		// 根据关系1的id查询三元组triplets(e_id, e_id2, ot_rl_id)
 		triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"]})
@@ -305,7 +306,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req *KGTaskReq) {
 			}()
 			wg.Wait()
 			//	根据eid2 找第二个三元组关系
-			for _, x := range Triplets2 {
+			for _, x := range returnNumSlice(nu, Triplets2) {
 				var kk, EntityB, EntityC []*bson.D
 				wg.Add(1)
 				go func() {

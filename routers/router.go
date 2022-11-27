@@ -92,7 +92,7 @@ func InitRouter() *gin.Engine {
 		app.SuccessResp(c, filename)
 	})
 	apiV1.POST("/export", models.ExportExcel)
-
+	apiV1.GET("/files", Validation(&v1.DirPath{}), v1.GetFileList)
 	apiPlan := apiV1.Group("/plan")
 	apiPlan.Use()
 	{

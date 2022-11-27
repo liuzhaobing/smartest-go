@@ -292,10 +292,10 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req *KGTaskReq) {
 		triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"]})
 		for _, triplet := range triplets {
 			var wg sync.WaitGroup
-			var EntityB, EntityA []*bson.D
+			var Triplets2, EntityA []*bson.D
 			wg.Add(1)
 			go func() {
-				EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": triplet.Map()["e_id2"]})
+				Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": triplet.Map()["e_id2"]})
 				wg.Done()
 			}()
 			wg.Add(1)
@@ -305,11 +305,16 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req *KGTaskReq) {
 			}()
 			wg.Wait()
 			//	根据eid2 找第二个三元组关系
-			for _, x := range EntityB {
-				var kk, EntityC []*bson.D
+			for _, x := range Triplets2 {
+				var kk, EntityB, EntityC []*bson.D
 				wg.Add(1)
 				go func() {
 					kk, _ = KG.KGCaseGetterMongo.MongoFind(ontologyRLTable, bson.M{"_id": x.Map()["ot_rl_id"]})
+					wg.Done()
+				}()
+				wg.Add(1)
+				go func() {
+					EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": x.Map()["e_id"], "need_audit": false}, options.Find().SetLimit(1))
 					wg.Done()
 				}()
 				wg.Add(1)
@@ -360,7 +365,7 @@ func (KG *KGTask) mockQueryOneStepByTemplate() (Req *KGTaskReq) {
 			var EntityB, EntityA []*bson.D
 			wg.Add(1)
 			go func() {
-				EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": triplet.Map()["e_id2"]})
+				EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": triplet.Map()["e_id2"], "need_audit": false}, options.Find().SetLimit(1))
 				wg.Done()
 			}()
 			wg.Add(1)

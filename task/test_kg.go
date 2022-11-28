@@ -80,7 +80,7 @@ type KGDataSource struct {
 	IsContinue   string           `json:"is_continue,omitempty" form:"is_continue,omitempty"`     // 是否持续测试
 	IsRandom     string           `json:"is_random,omitempty" form:"is_random,omitempty"`         // 是否随机测试
 	KGDataBase   *mongo.MongoInfo `json:"kg_data_base,omitempty" form:"kg_data_base,omitempty"`   // 用例构造使用的数据源
-	TemplateJson []*template      `json:"template_json,omitempty" form:"template_json,omitempty"` // 用例构造使用的模板
+	TemplateJson []*KGTemplate    `json:"template_json,omitempty" form:"template_json,omitempty"` // 用例构造使用的模板
 }
 
 type KGTaskReq struct {

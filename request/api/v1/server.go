@@ -17,7 +17,7 @@ func ListServers(context *gin.Context) {
 	model := models.NewTaskServerModel()
 	query := "1=1"
 	if req.ServerTypes != "" {
-		query = "types = '" + req.ServerTypes + "'"
+		query = "types like '%" + req.ServerTypes + "%'"
 	}
 	total, err := model.GetTaskServerTotal(query)
 	if err != nil {

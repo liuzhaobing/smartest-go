@@ -146,6 +146,13 @@ func InitRouter() *gin.Engine {
 		apiReportV1.POST("/export", models.MongoListAndExportFunc)
 	}
 
+	// 测试环境
+	apiServerV1 := apiV1.Group("/server")
+	apiServerV1.Use()
+	{
+		apiServerV1.GET("", Validation(&v1.ListServer{}), v1.ListServers)
+	}
+
 	// 测试用例管理
 	apiCasesV1 := apiV1.Group("/cases")
 	apiCasesV1.Use()

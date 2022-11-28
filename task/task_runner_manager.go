@@ -138,8 +138,10 @@ func statusFromDB(req *TaskInfo, tempTaskInfoMap map[string]*TaskInfo) {
 	for _, r := range results {
 		var dbTaskInfo *TaskInfo
 		b, _ := json.Marshal(r.Map())
-		json.Unmarshal(b, &dbTaskInfo)
-		tempTaskInfoMap[dbTaskInfo.JobInstanceId] = dbTaskInfo
+		if b != nil {
+			json.Unmarshal(b, &dbTaskInfo)
+			tempTaskInfoMap[dbTaskInfo.JobInstanceId] = dbTaskInfo
+		}
 	}
 }
 

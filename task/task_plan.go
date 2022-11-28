@@ -9,6 +9,7 @@ import (
 	"smartest-go/pkg/e"
 	util "smartest-go/pkg/util/const"
 	"strconv"
+	"strings"
 )
 
 /*
@@ -375,6 +376,9 @@ func TerminatePlan(context *gin.Context) {
 }
 
 func ExcelKGReader(filename, sheetname string) (req []*KGTaskReq) {
+	if !strings.Contains(filename, "./upload/") {
+		filename = "./upload/" + filename
+	}
 	f, err := excelize.OpenFile(filename)
 	if err != nil {
 		return nil

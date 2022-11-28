@@ -2,6 +2,7 @@ package task
 
 import (
 	"encoding/json"
+	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/gin-gonic/gin"
 	"smartest-go/models"
 	"smartest-go/pkg/app"
@@ -373,6 +374,45 @@ func TerminatePlan(context *gin.Context) {
 	})
 }
 
+func ExcelKGReader(filename, sheetname string) (req []*KGTaskReq) {
+	f, err := excelize.OpenFile(filename)
+	if err != nil {
+		return nil
+	}
+	tableHeader := make(map[int]string)
+
+	rows := f.GetRows(sheetname)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
+		}
+		tmpReq := &KGTaskReq{
+			Id:           0,
+			Query:        "",
+			ExpectAnswer: "",
+		}
+		for i, cellValue := range row {
+			// 记录表数据
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
+			}
+			if tableHeader[i] == "query" {
+				tmpReq.Query = cellValue
+			}
+			if tableHeader[i] == "expect_answer" {
+				tmpReq.ExpectAnswer = cellValue
+			}
+		}
+		req = append(req, tmpReq)
+	}
+	return
+}
+
 func InitTaskModel(config *AddTask) TaskModel {
 	switch config.TaskType {
 	case KnowledgeGraph:
@@ -385,7 +425,7 @@ func InitTaskModel(config *AddTask) TaskModel {
 		case KnowledgeGraphCases:
 			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, config.TaskDataSource.TestCaseKG, nil)}
 		case KnowledgeGraphExcel:
-			//	TODO
+			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, ExcelKGReader(config.TaskDataSource.KGExcel.FileName, config.TaskDataSource.KGExcel.SheetName), nil)}
 		}
 		return kg
 	}

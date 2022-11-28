@@ -129,6 +129,7 @@ type KGTask struct {
 	Results            []*KGTaskRes         // 结果集
 	RespChan           chan *KGTaskOnceResp //结果管道
 	RightCount         int
+	WrongCount         int
 	KGCaseGetterMongo  *mongo.MongoInfo
 	startTime          time.Time
 	endTime            time.Time
@@ -213,7 +214,7 @@ func (KG *KGTask) run() {
 				if value, ok := taskInfoMap[KG.KGConfig.TaskName]; ok {
 					value.ProgressPercent = (i + 1) * 100 / caseTotal
 					value.Progress = fmt.Sprintf(`%d/%d`, i+1, caseTotal)
-					value.Accuracy = float32(KG.RightCount) / float32(i+1)
+					value.Accuracy = float32(KG.RightCount) / float32(KG.RightCount+KG.WrongCount)
 				}
 			}
 		}
@@ -295,6 +296,7 @@ func (KG *KGTask) call(req *KGTaskReq) *KGTaskOnceResp {
 			KG.RightCount++
 		} else {
 			Res.IsPass = false
+			KG.WrongCount++
 		}
 	}
 	fmt.Println(Res.Res.ActAnswer)

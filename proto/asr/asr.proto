@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package asr;
+
+option go_package = ".;asr";
+
+import "google/protobuf/empty.proto";
+
+service AsrService {
+  // ASR语音识别
+  rpc AsrDecoder(stream AsrDecoderRequest) returns (stream AsrResponse) {}
+  // ASR热词添加
+  rpc AsrHotWords(HotWordsRequest) returns (HotWordsResponse){}
+  // ASR版本信息
+  rpc GetVersion(google.protobuf.Empty) returns (VersionResponse){}
+  // 热词添加结果回调
+  rpc AsrHotWordsCallback(CbHotWordsRequest) returns (HotWordsResponse){}
+  // 唤醒语音识别
+  rpc AsrDecoderWakeup(stream AsrDecoderRequest) returns (stream WakeupResponse) {}
+  // 唤醒小语种识别
+  rpc AsrTextWakeup(TextWakeupRequest) returns (WakeupResponse) {}
+  // 唤醒词服务同步接口
+  rpc SyncWuwWords(SyncWuwRequest) returns (SyncWuwResponse){}
+  // 内部消息同步
+  rpc SyncInnerMessage(MessageRequest) returns (SyncWuwResponse){}
+}
+
+message AsrDecoderRequest{
+  // 音频数据
+  bytes WavData = 1;
+  // 数据大小
+  int32 WavSize = 2;
+  // 是否结束0未结束,1结束
+  int32 WavEnd = 3;
+  // 请求guid
+  string Guid = 4;
+  // AgentId
+  string AgentId = 5;
+  // RobotId
+  string RobotId = 6;
+  // 语音文件aws s3地址
+  string WavS3Addr = 7;
+}
+
+message AsrResponse{
+  // 请求guid
+  string Guid = 1;
+  // 返回信息
+  string Message = 2;
+  // 错误码
+  int32 ErrCode = 3;
+  // 其他信息
+  string Extend = 4;
+}
+
+message HotWordsRequest{
+  // 客户Id
+  string ClientId = 1;
+  // ??
+  int32 AddClient  = 2;
+  // 热词
+  repeated string Words = 3;
+  // 请求guid
+  string Guid = 4;
+  // 是否是内部调用,默认false不是内部调用
+  bool IsInner = 5;
+  // 热词添加结果回调
+  string CallBackAddr = 6;
+}
+
+message InvalidData{
+  string InvalidWord = 1;
+  string ErrorInfo = 2;
+}
+
+message CbHotWordsRequest{
+  // 客户Id
+  string ClientId = 1;
+  // 请求guid
+  string Guid = 2;
+  // 错误编码 0：成功 其他失败
+  int32 ErrCode = 3;
+  // 返回信息
+  string Message = 4;
+  // 有效热词
+  repeated string Valid = 5;
+  // 无效热词
+  repeated InvalidData Invalid = 6;
+}
+
+message HotWordsResponse{
+  // 请求guid
+  string Guid = 1;
+  // 返回信息
+  string Message = 2;
+  // 错误编码
+  int32 ErrCode = 3;
+  // 其他信息
+  string Extend = 4;
+}
+
+message TextWakeupRequest{
+  string RobotId = 1;
+  // 唤醒请求字符串
+  string Text = 2;
+  // 请求guid
+  string Guid = 3;
+}
+
+message WakeupResponse{
+  // 0为未唤醒,1为唤醒,<0为异常
+  int32 Code = 1;
+  // 唤醒调用返回信息
+  string Message = 2;
+  // 请求guid
+  string Guid = 3;
+  // 其他信息
+  string Extend = 4;
+}
+
+message SyncWuwRequest{
+  string Robotid = 1;
+  // 唤醒词数组
+  repeated string WuwWords = 2;
+}
+
+message SyncWuwResponse{
+  // 返回信息
+  string Message = 1;
+  // 错误编码
+  int32 ErrCode = 2;//0:成功 其他:失败
+}
+
+message VersionResponse {
+  // 版本信息
+  string Version = 1;
+}
+
+message MessageRequest{
+  // 请求Id
+  string Guid = 1;
+  // 类型
+  int32 Code = 2;
+  // 消息
+  string Message = 3;
+}

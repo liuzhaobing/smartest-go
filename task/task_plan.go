@@ -50,6 +50,7 @@ type Excel struct {
 
 type TestConfig struct {
 	TestConfigKG *KGTaskConfig `json:"config_kg,omitempty" form:"config_kg,omitempty"` // 知识图谱
+	TestConfigQA *QATaskConfig `json:"config_qa,omitempty" form:"config_qa,omitempty"`
 }
 
 type ReportString struct {
@@ -59,7 +60,11 @@ type ReportString struct {
 type TestDataSource struct {
 	TestCaseKG   []*KGTaskReq  `json:"cases_kg,omitempty" form:"cases_kg,omitempty"`   // 知识图谱用例数据
 	KGDataSource *KGDataSource `json:"source_kg,omitempty" form:"source_kg,omitempty"` // 知识图谱用例构造
-	KGExcel      *Excel        `json:"excel_kg,omitempty" form:"excel_kg,omitempty"`   // 知识图谱Excel用例
+	KGExcel      *Excel        `json:"excel_kg,omitempty" form:"excel_kg,omitempty"`
+
+	TestCaseQA   []*QATaskReq  `json:"cases_qa,omitempty" form:"cases_qa,omitempty"`   // QA 用例数据
+	QADataSource *QADataSource `json:"source_qa,omitempty" form:"source_qa,omitempty"` // QA 用例构造
+	QAExcel      *Excel        `json:"excel_qa,omitempty" form:"excel_qa,omitempty"`   // QA Excel用例
 }
 
 func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
@@ -86,6 +91,22 @@ func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 			TestCaseKG:   make([]*KGTaskReq, 0),
 			KGDataSource: &KGDataSource{},
 			KGExcel:      &Excel{},
+		}
+		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
+		if err != nil {
+			return nil, err
+		}
+	case CommonQA:
+		s.TaskConfig = &TestConfig{TestConfigQA: &QATaskConfig{}}
+		err := json.Unmarshal([]byte(j.TaskConfig), s.TaskConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		s.TaskDataSource = &TestDataSource{
+			TestCaseQA:   make([]*QATaskReq, 0),
+			QADataSource: &QADataSource{},
+			QAExcel:      &Excel{},
 		}
 		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
 		if err != nil {
@@ -417,6 +438,57 @@ func ExcelKGReader(filename, sheetname string) (req []*KGTaskReq) {
 	return
 }
 
+func ExcelQAReader(filename, sheetname string) (req []*QATaskReq) {
+	if !strings.Contains(filename, "./upload/") {
+		filename = "./upload/" + filename
+	}
+	f, err := excelize.OpenFile(filename)
+	if err != nil {
+		return nil
+	}
+	tableHeader := make(map[int]string)
+
+	rows := f.GetRows(sheetname)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
+		}
+		tmpReq := &QATaskReq{
+			Id:           0,
+			Query:        "",
+			ExpectAnswer: []string{},
+			ExpectGroup:  0,
+			RobotType:    "",
+		}
+		for i, cellValue := range row {
+			// 记录表数据
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
+			}
+			if tableHeader[i] == "question" {
+				tmpReq.Query = cellValue // 这里先不去处理&& 在pre阶段去统一处理
+			}
+			if tableHeader[i] == "answer_list" {
+				tmpReq.ExpectAnswer = strings.Split(cellValue, "&&")
+			}
+			if tableHeader[i] == "qa_group_id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.ExpectGroup = int64(num)
+			}
+			if tableHeader[i] == "robot_type" {
+				tmpReq.RobotType = cellValue
+			}
+		}
+		req = append(req, tmpReq)
+	}
+	return
+}
+
 func InitTaskModel(config *AddTask) TaskModel {
 	switch config.TaskType {
 	case KnowledgeGraph:
@@ -432,6 +504,19 @@ func InitTaskModel(config *AddTask) TaskModel {
 			kg = &KGTaskTest{KGTask: NewKGTask(kgConfig, ExcelKGReader(config.TaskDataSource.KGExcel.FileName, config.TaskDataSource.KGExcel.SheetName), nil)}
 		}
 		return kg
+	case CommonQA:
+		var qa TaskModel = &QATask{}
+		qaConfig := config.TaskConfig.TestConfigQA
+
+		switch config.TaskDataSourceLabel {
+		case CommonQASource:
+			qa = &QATaskTest{QATask: NewQATask(qaConfig, make([]*QATaskReq, 0), config.TaskDataSource.QADataSource)}
+		case CommonQACases:
+			qa = &QATaskTest{QATask: NewQATask(qaConfig, config.TaskDataSource.TestCaseQA, nil)}
+		case CommonQAExcel:
+			qa = &QATaskTest{QATask: NewQATask(qaConfig, ExcelQAReader(config.TaskDataSource.QAExcel.FileName, config.TaskDataSource.QAExcel.SheetName), nil)}
+		}
+		return qa
 	}
 	return nil
 }
@@ -441,4 +526,8 @@ var (
 	KnowledgeGraphSource = "source_kg"
 	KnowledgeGraphCases  = "cases_kg"
 	KnowledgeGraphExcel  = "excel_kg"
+	CommonQA             = "qa"
+	CommonQASource       = "source_qa"
+	CommonQACases        = "cases_qa"
+	CommonQAExcel        = "excel_qa"
 )

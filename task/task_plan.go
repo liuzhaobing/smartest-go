@@ -49,8 +49,9 @@ type Excel struct {
 }
 
 type TestConfig struct {
-	TestConfigKG *KGTaskConfig `json:"config_kg,omitempty" form:"config_kg,omitempty"` // 知识图谱
-	TestConfigQA *QATaskConfig `json:"config_qa,omitempty" form:"config_qa,omitempty"`
+	TestConfigKG    *KGTaskConfig    `json:"config_kg,omitempty" form:"config_kg,omitempty"` // 知识图谱
+	TestConfigQA    *QATaskConfig    `json:"config_qa,omitempty" form:"config_qa,omitempty"`
+	TestConfigSkill *SkillTaskConfig `json:"config_skill,omitempty" form:"config_skill,omitempty"`
 }
 
 type ReportString struct {
@@ -65,6 +66,10 @@ type TestDataSource struct {
 	TestCaseQA   []*QATaskReq  `json:"cases_qa,omitempty" form:"cases_qa,omitempty"`   // QA 用例数据
 	QADataSource *QADataSource `json:"source_qa,omitempty" form:"source_qa,omitempty"` // QA 用例构造
 	QAExcel      *Excel        `json:"excel_qa,omitempty" form:"excel_qa,omitempty"`   // QA Excel用例
+
+	TestCaseSkill   []*SkillTaskReq  `json:"cases_skill,omitempty" form:"cases_skill,omitempty"`
+	SkillDataSource *SkillDataSource `json:"source_skill,omitempty" form:"source_skill,omitempty"`
+	SkillExcel      *Excel           `json:"excel_skill,omitempty" form:"excel_skill,omitempty"`
 }
 
 func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
@@ -489,6 +494,87 @@ func ExcelQAReader(filename, sheetname string) (req []*QATaskReq) {
 	return
 }
 
+func ExcelSkillReader(filename, sheetname string) (req []*SkillTaskReq) {
+	if !strings.Contains(filename, "./upload/") {
+		filename = "./upload/" + filename
+	}
+	f, err := excelize.OpenFile(filename)
+	if err != nil {
+		return nil
+	}
+	tableHeader := make(map[int]string)
+
+	rows := f.GetRows(sheetname)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
+		}
+		tmpReq := &SkillTaskReq{}
+		for i, cellValue := range row {
+			// 记录表数据
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
+			}
+			if tableHeader[i] == "question" {
+				tmpReq.Query = cellValue
+			}
+			if tableHeader[i] == "source" {
+				tmpReq.ExpectSource = cellValue
+			}
+
+			if tableHeader[i] == "domain" {
+				tmpReq.ExpectDomain = cellValue
+			}
+
+			if tableHeader[i] == "intent" {
+				tmpReq.ExpectIntent = cellValue
+			}
+
+			if tableHeader[i] == "skill_source" {
+				tmpReq.SkillSource = cellValue
+			}
+
+			if tableHeader[i] == "skill_cn" {
+				tmpReq.SkillCn = cellValue
+			}
+
+			if tableHeader[i] == "robot_id" {
+				tmpReq.RobotID = cellValue
+			}
+
+			if tableHeader[i] == "usetest" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.UseTest = num
+			}
+
+			if tableHeader[i] == "is_smoke" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.IsSmoke = num
+			}
+
+			if tableHeader[i] == "paraminfo" {
+				tmpReq.ExpectParamInfo = cellValue
+			}
+
+			if tableHeader[i] == "case_version" {
+				num64, _ := strconv.ParseFloat(cellValue, 32)
+				tmpReq.CaseVersion = float32(num64)
+			}
+
+			if tableHeader[i] == "robot_type" {
+				tmpReq.RobotType = cellValue
+			}
+		}
+		req = append(req, tmpReq)
+	}
+	return
+}
+
 func InitTaskModel(config *AddTask) TaskModel {
 	switch config.TaskType {
 	case KnowledgeGraph:
@@ -517,6 +603,19 @@ func InitTaskModel(config *AddTask) TaskModel {
 			qa = &QATaskTest{QATask: NewQATask(qaConfig, ExcelQAReader(config.TaskDataSource.QAExcel.FileName, config.TaskDataSource.QAExcel.SheetName), nil)}
 		}
 		return qa
+	case SystemSkill:
+		var Skill TaskModel = &SkillTask{}
+		SkillConfig := config.TaskConfig.TestConfigSkill
+
+		switch config.TaskDataSourceLabel {
+		case SystemSkillSource:
+			Skill = &SkillTaskTest{SkillTask: NewSkillTask(SkillConfig, make([]*SkillTaskReq, 0), config.TaskDataSource.SkillDataSource)}
+		case SystemSkillCases:
+			Skill = &SkillTaskTest{SkillTask: NewSkillTask(SkillConfig, config.TaskDataSource.TestCaseSkill, nil)}
+		case SystemSkillExcel:
+			Skill = &SkillTaskTest{SkillTask: NewSkillTask(SkillConfig, ExcelSkillReader(config.TaskDataSource.SkillExcel.FileName, config.TaskDataSource.SkillExcel.SheetName), nil)}
+		}
+		return Skill
 	}
 	return nil
 }
@@ -530,4 +629,8 @@ var (
 	CommonQASource       = "source_qa"
 	CommonQACases        = "cases_qa"
 	CommonQAExcel        = "excel_qa"
+	SystemSkill          = "skill"
+	SystemSkillSource    = "source_skill"
+	SystemSkillCases     = "cases_skill"
+	SystemSkillExcel     = "excel_skill"
 )

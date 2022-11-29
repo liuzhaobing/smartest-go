@@ -24,6 +24,7 @@ type SkillBaseTest struct {
 	Params      string        `form:"params,omitempty"         json:"params"         gorm:"column:params"`
 	RobotId     string        `form:"robot_id,omitempty"       json:"robot_id"       gorm:"column:robot_id"`
 	UseTest     int           `form:"usetest,omitempty"        json:"usetest"        gorm:"column:usetest"`
+	IsSmoke     int           `form:"is_smoke,omitempty"        json:"is_smoke"        gorm:"column:is_smoke"`
 	CreateTime  util.JSONTime `form:"create_time,omitempty"    json:"create_time"    gorm:"column:create_time"`
 	UpdateTime  util.JSONTime `form:"update_time,omitempty"    json:"update_time"    gorm:"column:update_time"`
 	ParamInfo   string        `form:"paraminfo,omitempty"      json:"paraminfo"      gorm:"column:paraminfo"`

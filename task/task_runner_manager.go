@@ -199,6 +199,23 @@ func EndMissionFlag(taskName string) (success bool, info *TaskInfo) {
 	return false, nil
 }
 
+// ErrorMissionFlag 任务故障时 记录错误信息 并退出执行  //512准备中 -> 64失败 //256执行中 -> 64失败
+func ErrorMissionFlag(taskName, errMessage string) (success bool, info *TaskInfo) {
+	value, ok := taskInfoMap[taskName]
+	if ok && (value.Status == 512 || value.Status == 256) {
+		value.Cancel()
+		value.Status = 64
+		value.Message = errMessage
+		value.EndTime = time.Now().Format("2006-01-02 15:04:05")
+		models.ReporterDB.MongoInsertOne(TasksTable, value)
+		delete(taskInfoMap, taskName)
+		finalResult, _ := json.Marshal(value)
+		fmt.Println(string(finalResult))
+		return true, value
+	}
+	return false, nil
+}
+
 // TerminateMissionFlag 任务手动停止时 更新记录  //512准备中 -> 256执行中 -> 128已停止 -> 64失败 -> 32成功
 func TerminateMissionFlag(taskName string) (success bool, info *TaskInfo) {
 	value, ok := taskInfoMap[taskName]

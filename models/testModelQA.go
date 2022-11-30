@@ -17,7 +17,8 @@ type QaBaseTest struct {
 	CreateTime JSONTime `json:"create_time"   gorm:"column:create_time"`    // 创建时间
 	UpdateTime JSONTime `json:"update_time"   gorm:"column:update_time"`    // 更新时间
 	RobotType  string   `json:"robot_type"    gorm:"column:robot_type"`     // 机型
-	RobotId    string   `json:"robot_id"    gorm:"column:robot_id"`         // 机型
+	RobotId    string   `json:"robot_id"    gorm:"column:robot_id"`
+	IsSmoke    int      `json:"is_smoke"    gorm:"column:is_smoke"`
 
 	Session *Session `json:"-" gorm:"-"`
 }

@@ -39,6 +39,7 @@ type QATaskReq struct {
 	ExpectAnswer []string `json:"answer_list,omitempty" form:"answer_list,omitempty"` //期望的A列表
 	ExpectGroup  int64    `json:"qa_group_id,omitempty" form:"qa_group_id,omitempty"` //期望的group_id
 	RobotType    string   `json:"robot_type,omitempty" form:"robot_type,omitempty"`   //请求的机器人机型
+	IsSmoke      int      `json:"is_smoke,omitempty" form:"is_smoke,omitempty"`       //请求的机器人机型
 }
 
 type QATaskRes struct {

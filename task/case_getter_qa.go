@@ -30,6 +30,7 @@ func (QA *QATask) CaseGetterQA(c context.Context) {
 			ExpectAnswer: strings.Split(qaBaseTest.AnswerList, "&&"),
 			ExpectGroup:  qaBaseTest.QaGroupId,
 			RobotType:    qaBaseTest.RobotType,
+			IsSmoke:      qaBaseTest.IsSmoke,
 		})
 	}
 }

@@ -374,8 +374,11 @@ func (Skill *SkillTask) call(conn *grpc.ClientConn, req *SkillTaskReq) *SkillTas
 	Skill.getSkillResponseData(resp, Res.Res) // 从响应体收集信息
 	Skill.assertSkillIntent(Res)              // 断言意图
 	Skill.assertSkillParamInfo(Res)           // 断言槽位
-	Skill.debugModelCheck(Res)                // Debug模式检测算法命中
-	Skill.tagToDeveloper(Res)                 // BUG分配
+	if !Res.IsParamInfoPass {
+		Res.FailReason = "槽位命中错误"
+	}
+	Skill.debugModelCheck(Res) // Debug模式检测算法命中
+	Skill.tagToDeveloper(Res)  // BUG分配
 
 	if Res.IsIntentPass {
 		Skill.RightCount++
@@ -484,11 +487,239 @@ func (Skill *SkillTask) assertSkillIntent(Res *SkillTaskOnceResp) {
 }
 
 func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
+	if Res.Req.ExpectParamInfo == "" && Res.Res.ActParamInfo == "" {
+		Res.IsParamInfoPass = true
+		return
+	}
+	if Res.Res.ActParamInfo == "" || Res.Req.ExpectParamInfo == "" {
+		Res.IsParamInfoPass = false
+		return
+	}
 
+	expParam := make([]*SkillParamInfo, 0)
+	err := json.Unmarshal([]byte(Res.Req.ExpectParamInfo), &expParam)
+	if err != nil {
+		Res.IsParamInfoPass = false
+		return
+	}
+	actParam := make([]*SkillParamInfo, 0)
+	err = json.Unmarshal([]byte(Res.Res.ActParamInfo), &actParam)
+	if err != nil {
+		Res.IsParamInfoPass = false
+		return
+	}
+
+	// around 技能特殊处理
+	if Res.Req.ExpectDomain == "around" {
+		if len(expParam) != len(actParam) {
+			Res.IsParamInfoPass = false
+			return
+		}
+		for _, act := range actParam {
+			if act.Value == "" {
+				Res.IsParamInfoPass = false
+				return
+			}
+		}
+		Res.IsParamInfoPass = true
+		return
+	}
+
+	// 判断所有预期结果是否都命中
+	for _, exp := range expParam {
+		if !strings.Contains(Res.Res.ActParamInfo, exp.Name) {
+			Res.IsParamInfoPass = false
+			return
+		}
+		if !strings.Contains(Res.Res.ActParamInfo, exp.BeforeValue) {
+			Res.IsParamInfoPass = false
+			return
+		}
+	}
+	Res.IsParamInfoPass = true
+
+	//不开启上下文时（单轮），需要进一步断言，观察实际结果是否符合预期
+	if Res.Req.RobotID == "" {
+		return
+	}
+	for _, act := range actParam {
+		if act.Value == "" {
+			Res.IsParamInfoPass = false
+			return
+		}
+		if !strings.Contains(Res.Req.ExpectParamInfo, act.Name) {
+			Res.IsParamInfoPass = false
+			return
+		}
+		if !strings.Contains(Res.Req.ExpectParamInfo, act.BeforeValue) {
+			Res.IsParamInfoPass = false
+			return
+		}
+	}
+}
+
+var (
+	JacksonZhang = "@Jackson Zhang 张发展"
+	MikeLuo      = "@Mike Luo 罗镇权"
+	KevinRen     = "@Kevin Ren 任珂"
+	AaronYang    = "@Aaron Yang 杨武"
+	YoungZhao    = "@Young Zhao 赵杨"
+	DavidLi      = "@David Li 李超凡"
+	ZipperZhao   = "@Zipper Zhao 赵鹏"
+	SevelLiu     = "@Sevel Liu 刘兆兵"
+	LeonZhou     = "@Leon Zhou 周磊"
+
+	JacksonEntity = "activity businessbrand person_name company robot_name crosstalk_performer crosstalk_title date drama_performer drama_title drama_type fcurrency food holiday joke_type location news orientation timescope person_virtual poem_content poem_title poem_type poem_writer product singer song_title solarterm song_type story_title story_type storytelling_performer storytelling_title vehicle year year_number tcurrency height weight iq_number age"
+)
+
+var developer = map[string]string{
+	/*
+		Step 1：[赵杨]排查工程模板问题、多轮问题        (algo==regex || robot_id!=nil)
+		Step 2：[杨武]排查机型问题                   (robot_type!=nil)
+		Step 3：[任珂]排查compute、system_dialet问题 (domain==compute || domain==system_dialet)
+		Step 4：[张发展]排查domain未命中问题           (source!=system_service && source!=user_service)
+					domainname==other :domain模型识别错误
+					domainname!=other
+						intentname==other :intent未命中
+							is_param_pass==true           :intent模型未识别导致domain未识别
+							is_param_pass==false          :槽位未识别导致intent模型未识别导致domain未识别
+							domain==around and param==空  :around槽位未识别导致domain未识别
+		Step 5: 排查intent未命中问题                 (is_pass==false)
+					intentname!=intent
+						is_param_pass==true              :intent模型未命中
+							[张发展] domain in (music poetry crosstalk story storytelling)
+						is_param_pass==false             :intent槽位未命中
+							[任珂] domain in (weather_new stock compute dance_action joke system)   :实体树问题
+							[张发展] domain in (times meta currency )                               :NER实体问题
+							[罗镇权] domain in (robot_character)                                    :期望无实体但槽位识别错误
+		Step 6: [罗镇权]排查intent未命中问题          (intent in "system_urgent system robot_character meta currency weather_new stock")
+		Step 7: [赵鹏/张发展]排查paraminfo未命中问题   (actual param is @sys or @ner)
+		Step 8: [TimeOut]排查超时问题                (Cost > 600 ms)
+		Step 9：[All]排查其他domain
+				[付霞]   (music)
+				[罗镇权] (dance around joke)
+				[任珂]   (times poetry)
+				[杨武]   (twister search)
+				[赵杨]   (indoornavigation multimedia)
+				[李超凡] (system_urgent system robot_character meta storytelling currency ha feedback)
+				[赵鹏]   (weather_new stock crosstalk translate drama constellation repeat)
+	*/
+	MikeLuo:    "dance around joke",
+	KevinRen:   "times poetry",
+	AaronYang:  "twister search",
+	YoungZhao:  "indoornavigation multimedia",
+	DavidLi:    "system_urgent system robot_character meta storytelling currency ha feedback",
+	ZipperZhao: "weather_new stock crosstalk translate drama constellation repeat",
 }
 
 func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
+	if Res.IsParamInfoPass && Res.IsIntentPass {
+		return
+	}
 
+	Res.BugStatus = "New"
+
+	if Res.Res.Algo == "regex" || Res.Req.RobotID != "" {
+		Res.Developer = YoungZhao // 排查模板匹配和多轮问题
+		return
+	}
+	if Res.Req.RobotType != "" {
+		Res.Developer = AaronYang // 排查机型问题
+		return
+	}
+	if Res.Req.ExpectDomain == "compute" ||
+		Res.Req.ExpectDomain == "system_dialet" {
+		Res.Developer = KevinRen // 排查compute、system_dialet问题
+		return
+	}
+	if !strings.Contains("system_service&&user_service", Res.Res.ActSource) &&
+		Res.Res.NLUDebugInfo != "" {
+		if Res.EdgCost.Milliseconds() > 600 {
+			Res.BugStatus = "TimeOut导致Domain未命中"
+			Res.Developer = SevelLiu
+			return
+		}
+
+		if gjson.Get(Res.Res.NLUDebugInfo, "domainname").String() == "other" {
+			Res.FailReason = "domain模型识别错误"
+			Res.Developer = LeonZhou // 排查domain未命中
+			return
+		}
+		if gjson.Get(Res.Res.NLUDebugInfo, "intentname").String() == "other" {
+			if Res.IsParamInfoPass {
+				Res.FailReason = "intent模型未识别导致domain未识别"
+			} else {
+				Res.FailReason = "槽位未识别导致intent模型未识别导致domain未识别"
+			}
+			// TODO 这儿应该分给谁
+			Res.Developer = MikeLuo
+			return
+		}
+	}
+	if Res.FailReason == "intent未命中" &&
+		Res.Res.NLUDebugInfo != "" {
+		if gjson.Get(Res.Res.NLUDebugInfo, "intentname").String() != Res.Req.ExpectIntent {
+			if Res.IsParamInfoPass {
+				Res.FailReason = "intent模型未命中"
+				if strings.Contains("music poetry crosstalk story storytelling", Res.Req.ExpectDomain) {
+					Res.Developer = JacksonZhang
+				} else {
+					Res.Developer = MikeLuo
+				}
+				return
+			}
+			Res.FailReason = "intent槽位未命中"
+			if strings.Contains("weather_new stock compute dance_action joke system", Res.Req.ExpectDomain) {
+				Res.FailReason = "实体树问题"
+				Res.Developer = KevinRen
+				return
+			}
+			if strings.Contains("times meta currency", Res.Req.ExpectDomain) {
+				Res.FailReason = "NER实体问题"
+				Res.Developer = JacksonZhang
+				return
+			}
+			if strings.Contains("robot_character", Res.Req.ExpectDomain) {
+				Res.FailReason = "期望无实体但槽位识别错误"
+				Res.Developer = MikeLuo
+				return
+			}
+		}
+		if strings.Contains("system_urgent system robot_character meta currency weather_new stock", Res.Req.ExpectDomain) {
+			Res.Developer = MikeLuo // 排查部分技能intent未命中问题
+			return
+		}
+	}
+	if Res.FailReason == "槽位命中错误" && Res.Res.NLUDebugInfo != "" {
+		if Res.Req.ExpectParamInfo != "" {
+			expParam := make([]*SkillParamInfo, 0)
+			err := json.Unmarshal([]byte(Res.Req.ExpectParamInfo), &expParam)
+			if err != nil {
+				Res.FailReason = "用例槽位期望值错误"
+				Res.Developer = SevelLiu
+				return
+			}
+			for _, exp := range expParam {
+				tp := strings.Split(exp.EntityType, ".")
+				if strings.Contains(JacksonEntity, tp[len(tp)-1]) {
+					Res.Developer = JacksonZhang
+					return
+				}
+			}
+		}
+		if Res.Res.ActParamInfo != "" {
+			Res.Developer = ZipperZhao
+			return
+		}
+	}
+	for developerName, developerDomains := range developer {
+		if strings.Contains(developerDomains, Res.Req.ExpectDomain) {
+			Res.Developer = developerName
+			return
+		}
+	}
+	Res.Developer = SevelLiu
+	return
 }
 
 func (Skill *SkillTask) debugModelCheck(Res *SkillTaskOnceResp) {

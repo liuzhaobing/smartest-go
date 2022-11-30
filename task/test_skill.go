@@ -86,11 +86,10 @@ type SkillTaskOnceResp struct {
 
 // SkillResults 存储Skill测试结果的MongoDB表结构
 type SkillResults struct {
-	JobName         string  `json:"job_name,omitempty"      bson:"job_name,omitempty"`               // JobName+JobId 唯一标识一个测试任务
-	JobId           string  `json:"job_id,omitempty"      bson:"job_id,omitempty"`                   // JobName+JobId 唯一标识一个测试任务
+	JobName         string  `json:"task_name,omitempty"      bson:"task_name,omitempty"`             // JobName+JobId 唯一标识一个测试任务
 	JobInstanceId   string  `json:"job_instance_id,omitempty"      bson:"job_instance_id,omitempty"` // JobInstanceId+ExecuteTime 唯一标识一个测试执行历史
 	ExecuteTime     int64   `json:"execute_time,omitempty"      bson:"execute_time,omitempty"`       // JobInstanceId+ExecuteTime 唯一标识一个测试执行历史
-	CaseNumber      int64   `json:"case_number,omitempty"      bson:"case_number,omitempty"`
+	CaseNumber      int64   `json:"id,omitempty"      bson:"id,omitempty"`
 	Question        string  `json:"question,omitempty"      bson:"question,omitempty"`
 	Source          string  `json:"source,omitempty"      bson:"source,omitempty"`
 	ActSource       string  `json:"act_source,omitempty"      bson:"act_source,omitempty"`
@@ -102,8 +101,8 @@ type SkillResults struct {
 	ActIntentTTS    string  `json:"act_intent_tts,omitempty"      bson:"act_intent_tts,omitempty"`
 	IsSmoke         int     `json:"is_smoke,omitempty"      bson:"is_smoke,omitempty"`
 	Parameters      string  `json:"parameters,omitempty"      bson:"parameters,omitempty"`
-	Cost            int64   `json:"cost,omitempty"      bson:"cost,omitempty"`
-	ParamInfo       string  `json:"param_info,omitempty"      bson:"param_info,omitempty"`
+	Cost            int64   `json:"edg_cost,omitempty"      bson:"edg_cost,omitempty"`
+	ParamInfo       string  `json:"paraminfo,omitempty"      bson:"paraminfo,omitempty"`
 	ActParamInfo    string  `json:"act_param_info,omitempty"      bson:"act_param_info,omitempty"`
 	ParamInfoIsPass bool    `json:"param_info_is_pass,omitempty"      bson:"param_info_is_pass,omitempty"`
 	AnswerString    string  `json:"answer_string,omitempty"      bson:"answer_string,omitempty"`

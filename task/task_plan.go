@@ -117,6 +117,22 @@ func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 		if err != nil {
 			return nil, err
 		}
+	case SystemSkill:
+		s.TaskConfig = &TestConfig{TestConfigSkill: &SkillTaskConfig{}}
+		err := json.Unmarshal([]byte(j.TaskConfig), s.TaskConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		s.TaskDataSource = &TestDataSource{
+			TestCaseSkill:   make([]*SkillTaskReq, 0),
+			SkillDataSource: &SkillDataSource{},
+			SkillExcel:      &Excel{},
+		}
+		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return s, nil
 }

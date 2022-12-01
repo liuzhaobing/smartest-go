@@ -156,6 +156,16 @@ func InitRouter() *gin.Engine {
 		apiServerV1.POST("", Validation(&v1.AddServer{}), v1.AddServers)
 	}
 
+	// 测试数据
+	apiDataV1 := apiV1.Group("/data")
+	apiDataV1.Use()
+	{
+		apiDataV1.GET("", Validation(&v1.ListData{}), v1.ListDatas)
+		apiDataV1.PUT("/:id", Validation(&v1.AddData{}), v1.UpdateDatas)
+		apiDataV1.DELETE("/:id", v1.RemoveServers)
+		apiDataV1.POST("", Validation(&v1.AddData{}), v1.AddDatas)
+	}
+
 	// 测试用例管理
 	apiCasesV1 := apiV1.Group("/cases")
 	apiCasesV1.Use()

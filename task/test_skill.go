@@ -132,6 +132,7 @@ type SkillTask struct {
 	RespChan              chan *SkillTaskOnceResp
 	RightCount            int
 	WrongCount            int
+	JobInstanceId         string
 	startTime             time.Time
 	endTime               time.Time
 	cost                  time.Duration
@@ -176,10 +177,10 @@ func (Skill *SkillTask) pre() {
 		return
 	}
 	if Skill.SkillConfig.JobInstanceId == "" {
-		Skill.SkillConfig.JobInstanceId = uuid.New().String()
+		Skill.JobInstanceId = uuid.New().String()
 	}
 	value.TaskType = SystemSkill
-	value.JobInstanceId = Skill.SkillConfig.JobInstanceId
+	value.JobInstanceId = Skill.JobInstanceId
 
 	// 从数据库中获取用例
 	if len(Skill.req) == 0 || Skill.SkillDataSourceConfig != nil {
@@ -251,7 +252,7 @@ func (Skill *SkillTask) run() {
 	var SkillResultList []interface{}
 	for resp := range Skill.RespChan {
 		SkillResultList = append(SkillResultList, &SkillResults{
-			JobInstanceId:   Skill.SkillConfig.JobInstanceId,
+			JobInstanceId:   Skill.JobInstanceId,
 			JobName:         Skill.SkillConfig.TaskName,
 			ExecuteTime:     resp.Res.ExecuteTime,
 			CaseNumber:      resp.Req.Id,

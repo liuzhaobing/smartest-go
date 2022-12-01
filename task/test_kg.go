@@ -130,6 +130,7 @@ type KGTask struct {
 	RespChan           chan *KGTaskOnceResp //结果管道
 	RightCount         int
 	WrongCount         int
+	JobInstanceId      string
 	KGCaseGetterMongo  *mongo.MongoInfo
 	startTime          time.Time
 	endTime            time.Time
@@ -158,10 +159,10 @@ func (KG *KGTask) pre() {
 		return
 	}
 	if KG.KGConfig.JobInstanceId == "" {
-		KG.KGConfig.JobInstanceId = uuid.New().String()
+		KG.JobInstanceId = uuid.New().String()
 	}
 	value.TaskType = KnowledgeGraph
-	value.JobInstanceId = KG.KGConfig.JobInstanceId
+	value.JobInstanceId = KG.JobInstanceId
 
 	// 需要先把用例放在 KG.req 如果非前端传递用例 则调用方法收集用例
 	if len(KG.req) == 0 || KG.KGDataSourceConfig != nil {
@@ -226,7 +227,7 @@ func (KG *KGTask) run() {
 	var KGResultList []interface{}
 	for resp := range KG.RespChan {
 		KGResultList = append(KGResultList, &KGResults{
-			JobInstanceId: KG.KGConfig.JobInstanceId,
+			JobInstanceId: KG.JobInstanceId,
 			Id:            resp.Req.Id,
 			Question:      resp.Req.Query,
 			Answer:        resp.Req.ExpectAnswer,

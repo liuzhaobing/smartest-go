@@ -8,10 +8,10 @@ import (
 )
 
 func (QA *QATask) getResultSummary() string {
-	total, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.QAConfig.JobInstanceId})
-	fail, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.QAConfig.JobInstanceId, "is_pass": false})
+	total, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId})
+	fail, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_pass": false})
 	costInfo, _ := models.ReporterDB.MongoAggregate(qaResultsTable, []bson.M{
-		{"$match": bson.M{"job_instance_id": QA.QAConfig.JobInstanceId}},
+		{"$match": bson.M{"job_instance_id": QA.JobInstanceId}},
 		{"$group": bson.M{
 			"_id":     "$job_instance_id",
 			"maxCost": bson.M{"$max": "$edg_cost"},
@@ -20,7 +20,7 @@ func (QA *QATask) getResultSummary() string {
 		}}})
 	summary := fmt.Sprintf("%s %s\n用例统计:%d, 错误数:%d, 正确率:%f, 用例并发数:%d\n最大耗时:%d, 最小耗时:%d, 平均耗时:%f\n请求地址:%s,AgentId:%d",
 		QA.QAConfig.TaskName,
-		QA.QAConfig.JobInstanceId,
+		QA.JobInstanceId,
 		total, fail, 1-float32(fail)/float32(total), QA.QAConfig.ChanNum,
 		costInfo[0].Map()["maxCost"],
 		costInfo[0].Map()["minCost"],

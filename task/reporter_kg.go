@@ -8,10 +8,10 @@ import (
 )
 
 func (KG *KGTask) getResultSummary() string {
-	total, _ := models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.KGConfig.JobInstanceId})
-	fail, _ := models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.KGConfig.JobInstanceId, "is_pass": false})
+	total, _ := models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId})
+	fail, _ := models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId, "is_pass": false})
 	costInfo, _ := models.ReporterDB.MongoAggregate(kgResultsTable, []bson.M{
-		{"$match": bson.M{"job_instance_id": KG.KGConfig.JobInstanceId}},
+		{"$match": bson.M{"job_instance_id": KG.JobInstanceId}},
 		{"$group": bson.M{
 			"_id":     "$job_instance_id",
 			"maxCost": bson.M{"$max": "$edg_cost"},
@@ -20,7 +20,7 @@ func (KG *KGTask) getResultSummary() string {
 		}}})
 	summary := fmt.Sprintf("%s %s\n用例统计:%d, 错误数:%d, 正确率:%f, 用例并发数:%d\n最大耗时:%d, 最小耗时:%d, 平均耗时:%f",
 		KG.KGConfig.TaskName,
-		KG.KGConfig.JobInstanceId,
+		KG.JobInstanceId,
 		total, fail, 1-float32(fail)/float32(total), KG.KGConfig.ChanNum,
 		costInfo[0].Map()["maxCost"],
 		costInfo[0].Map()["minCost"],

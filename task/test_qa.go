@@ -91,6 +91,7 @@ type QATask struct {
 	RespChan           chan *QATaskOnceResp
 	RightCount         int
 	WrongCount         int
+	JobInstanceId      string
 	startTime          time.Time
 	endTime            time.Time
 	cost               time.Duration
@@ -135,10 +136,10 @@ func (QA *QATask) pre() {
 		return
 	}
 	if QA.QAConfig.JobInstanceId == "" {
-		QA.QAConfig.JobInstanceId = uuid.New().String()
+		QA.JobInstanceId = uuid.New().String()
 	}
 	value.TaskType = CommonQA
-	value.JobInstanceId = QA.QAConfig.JobInstanceId
+	value.JobInstanceId = QA.JobInstanceId
 
 	// 从数据库中获取用例
 	if len(QA.req) == 0 || QA.QADataSourceConfig != nil {
@@ -210,7 +211,7 @@ func (QA *QATask) run() {
 	var QAResultList []interface{}
 	for resp := range QA.RespChan {
 		QAResultList = append(QAResultList, &QAResults{
-			JobInstanceId: QA.QAConfig.JobInstanceId,
+			JobInstanceId: QA.JobInstanceId,
 			Id:            resp.Req.Id,
 			Question:      resp.Req.Query,
 			Answer:        strings.Join(resp.Req.ExpectAnswer, "&&"),

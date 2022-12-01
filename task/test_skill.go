@@ -271,7 +271,7 @@ func (Skill *SkillTask) run() {
 			ActParamInfo:    resp.Res.ActParamInfo,
 			ParamInfoIsPass: resp.IsParamInfoPass,
 			AnswerString:    resp.Res.AnswerString,
-			AnswerUrl:       resp.Res.MusicUrl + " " + resp.Res.PicUrl + " " + resp.Res.VideoUrl,
+			AnswerUrl:       resp.Res.MusicUrl + "||" + resp.Res.PicUrl + "||" + resp.Res.VideoUrl,
 			CaseVersion:     resp.Req.CaseVersion,
 			Algo:            resp.Res.Algo,
 			AlgoScore:       resp.Res.AlgoScore,

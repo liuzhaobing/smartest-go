@@ -504,6 +504,10 @@ func ExcelQAReader(filename, sheetname string) (req []*QATaskReq) {
 			if tableHeader[i] == "robot_type" {
 				tmpReq.RobotType = cellValue
 			}
+			if tableHeader[i] == "is_smoke" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.IsSmoke = num
+			}
 		}
 		req = append(req, tmpReq)
 	}

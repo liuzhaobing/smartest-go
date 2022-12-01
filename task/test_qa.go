@@ -79,6 +79,7 @@ type QAResults struct {
 	ExecuteTime   int64  `bson:"execute_time"`     // 此条用例运行时间点
 	TaskName      string `bson:"task_name"`        // 测试计划名
 	TraceId       string `bson:"trace_id"`         // TraceID
+	IsSmoke       int    `bson:"is_smoke"`         //
 }
 
 type QATask struct {
@@ -222,6 +223,7 @@ func (QA *QATask) run() {
 			TaskName:      QA.QAConfig.TaskName,
 			Source:        resp.Res.Source,
 			TraceId:       resp.Res.TraceId,
+			IsSmoke:       resp.Req.IsSmoke,
 		})
 	}
 	models.ReporterDB.MongoInsertMany(qaResultsTable, QAResultList)

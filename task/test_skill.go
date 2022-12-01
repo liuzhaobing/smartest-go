@@ -477,29 +477,32 @@ func (Skill *SkillTask) assertSkillIntent(Res *SkillTaskOnceResp) {
 	}
 
 	// 记录错误原因
-	if Res.Req.ExpectDomain != Res.Res.ActDomain {
+	if Res.Req.ExpectSource != Res.Res.ActSource {
 		Res.FailReason = "domain未命中"
+		Res.IsIntentPass = false
+		return
 	}
 	if Res.Req.ExpectIntent != Res.Res.ActIntentHitLog {
 		Res.FailReason = "intent未命中"
+		Res.IsIntentPass = false
+		return
 	}
-	return
 }
 
 func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
 	if Res.Req.ExpectParamInfo == "" && Res.Res.ActParamInfo == "" {
-		Res.IsParamInfoPass = true
+		Res.IsParamInfoPass = true // 期望槽位与实际槽位同时为空
 		return
 	}
 	if Res.Res.ActParamInfo == "" || Res.Req.ExpectParamInfo == "" {
-		Res.IsParamInfoPass = false
+		Res.IsParamInfoPass = false // 期望槽位与实际槽位至少有一个为空
 		return
 	}
 
 	expParam := make([]*SkillParamInfo, 0)
 	err := json.Unmarshal([]byte(Res.Req.ExpectParamInfo), &expParam)
 	if err != nil {
-		Res.IsParamInfoPass = false
+		Res.IsParamInfoPass = false // 期望槽位转struct失败 期望本身问题
 		return
 	}
 	actParam := make([]*SkillParamInfo, 0)
@@ -512,12 +515,12 @@ func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
 	// around 技能特殊处理
 	if Res.Req.ExpectDomain == "around" {
 		if len(expParam) != len(actParam) {
-			Res.IsParamInfoPass = false
+			Res.IsParamInfoPass = false // 期望槽位与实际槽位的数量不一致
 			return
 		}
 		for _, act := range actParam {
 			if act.Value == "" {
-				Res.IsParamInfoPass = false
+				Res.IsParamInfoPass = false // 实际槽位后值为空
 				return
 			}
 		}
@@ -527,35 +530,23 @@ func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
 
 	// 判断所有预期结果是否都命中
 	for _, exp := range expParam {
-		if !strings.Contains(Res.Res.ActParamInfo, exp.Name) {
-			Res.IsParamInfoPass = false
+		if !strings.Contains(Res.Res.ActParamInfo, exp.Name) ||
+			!strings.Contains(Res.Res.ActParamInfo, exp.BeforeValue) {
+			Res.IsParamInfoPass = false // BeforeValue 和 Name 均需要一致
 			return
 		}
-		if !strings.Contains(Res.Res.ActParamInfo, exp.BeforeValue) {
-			Res.IsParamInfoPass = false
+	}
+	// 判断所有实际结果是否都命中
+	for _, act := range actParam {
+		if act.Value == "" ||
+			!strings.Contains(Res.Req.ExpectParamInfo, act.Name) ||
+			!strings.Contains(Res.Req.ExpectParamInfo, act.BeforeValue) {
+			Res.IsParamInfoPass = false // BeforeValue 和 Name 均需要一致
 			return
 		}
 	}
 	Res.IsParamInfoPass = true
-
-	//不开启上下文时（单轮），需要进一步断言，观察实际结果是否符合预期
-	if Res.Req.RobotID == "" {
-		return
-	}
-	for _, act := range actParam {
-		if act.Value == "" {
-			Res.IsParamInfoPass = false
-			return
-		}
-		if !strings.Contains(Res.Req.ExpectParamInfo, act.Name) {
-			Res.IsParamInfoPass = false
-			return
-		}
-		if !strings.Contains(Res.Req.ExpectParamInfo, act.BeforeValue) {
-			Res.IsParamInfoPass = false
-			return
-		}
-	}
+	return
 }
 
 var (
@@ -632,10 +623,10 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 		Res.Developer = KevinRen // 排查compute、system_dialet问题
 		return
 	}
-	if !strings.Contains("system_service&&user_service", Res.Res.ActSource) &&
+	if Res.FailReason == "domain未命中" &&
 		Res.Res.NLUDebugInfo != "" {
 		if Res.EdgCost.Milliseconds() > 600 {
-			Res.BugStatus = "TimeOut导致Domain未命中"
+			Res.FailReason = "TimeOut导致Domain未命中"
 			Res.Developer = SevelLiu
 			return
 		}
@@ -651,7 +642,6 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 			} else {
 				Res.FailReason = "槽位未识别导致intent模型未识别导致domain未识别"
 			}
-			// TODO 这儿应该分给谁
 			Res.Developer = MikeLuo
 			return
 		}

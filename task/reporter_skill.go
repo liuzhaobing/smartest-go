@@ -1,6 +1,7 @@
 package task
 
 import (
+	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
@@ -8,41 +9,45 @@ import (
 )
 
 func (Skill *SkillTask) writeSkillResultExcel() {
-	headers := []map[string]string{
-		{"key": "id", "label": "用例编号"},
-		{"key": "question", "label": "测试语句"},
-		{"key": "source", "label": "期望source"},
-		{"key": "act_source", "label": "实际source"},
-		{"key": "domain", "label": "期望domain"},
-		{"key": "act_domain", "label": "实际domain"},
-		{"key": "intent", "label": "期望intent"},
-		{"key": "act_intent", "label": "实际intent(hitlog.intent)"},
-		{"key": "is_pass", "label": "意图是否通过"},
-		{"key": "act_intent_tts", "label": "实际intent(tts...intent)"},
-		{"key": "is_smoke", "label": "发布必测"},
-		{"key": "parameters", "label": "params实际值"},
-		{"key": "edg_cost", "label": "端测耗时(ms)"},
-		{"key": "paraminfo", "label": "槽位ParamInfo期望值"},
-		{"key": "act_param_info", "label": "槽位ParamInfo实际值"},
-		{"key": "param_info_is_pass", "label": "槽位是否通过"},
-		{"key": "answer_string", "label": "回答内容"},
-		{"key": "answer_url", "label": "回答Url"},
-		{"key": "case_version", "label": "用例版本"},
-		{"key": "algo", "label": "Algo"},
-		{"key": "algo_score", "label": "算法得分"},
-		{"key": "act_input_context", "label": "多轮input context"},
-		{"key": "robot_id", "label": "多轮组RobotId"},
-		{"key": "trace_id", "label": "TranceId"},
-		{"key": "act_robot_type", "label": "机器人类型"},
-		{"key": "nlu_debug_info", "label": "NLUDebugInfo"},
-		{"key": "entity_trie", "label": "EntityTrie"},
-		{"key": "ner_trie", "label": "NERTrie"},
-		{"key": "fail_reason", "label": "失败原因"},
-		{"key": "filter_developer", "label": "BUG初筛责任人"},
-		{"key": "assign_reason", "label": "BUG流转说明"},
-		{"key": "fix_developer", "label": "BUG修复责任人"},
-		{"key": "bug_status", "label": "BUG解决状态"},
-	}
+	//headers := []map[string]string{
+	//	{"key": "id", "label": "用例编号"},
+	//	{"key": "question", "label": "测试语句"},
+	//	{"key": "source", "label": "期望source"},
+	//	{"key": "act_source", "label": "实际source"},
+	//	{"key": "domain", "label": "期望domain"},
+	//	{"key": "act_domain", "label": "实际domain"},
+	//	{"key": "intent", "label": "期望intent"},
+	//	{"key": "act_intent", "label": "实际intent(hitlog.intent)"},
+	//	{"key": "is_pass", "label": "意图是否通过"},
+	//	{"key": "act_intent_tts", "label": "实际intent(tts...intent)"},
+	//	{"key": "is_smoke", "label": "发布必测"},
+	//	{"key": "parameters", "label": "params实际值"},
+	//	{"key": "edg_cost", "label": "端测耗时(ms)"},
+	//	{"key": "paraminfo", "label": "槽位ParamInfo期望值"},
+	//	{"key": "act_param_info", "label": "槽位ParamInfo实际值"},
+	//	{"key": "param_info_is_pass", "label": "槽位是否通过"},
+	//	{"key": "answer_string", "label": "回答内容"},
+	//	{"key": "answer_url", "label": "回答Url"},
+	//	{"key": "case_version", "label": "用例版本"},
+	//	{"key": "algo", "label": "Algo"},
+	//	{"key": "algo_score", "label": "算法得分"},
+	//	{"key": "act_input_context", "label": "多轮input context"},
+	//	{"key": "robot_id", "label": "多轮组RobotId"},
+	//	{"key": "trace_id", "label": "TranceId"},
+	//	{"key": "act_robot_type", "label": "机器人类型"},
+	//	{"key": "nlu_debug_info", "label": "NLUDebugInfo"},
+	//	{"key": "entity_trie", "label": "EntityTrie"},
+	//	{"key": "ner_trie", "label": "NERTrie"},
+	//	{"key": "fail_reason", "label": "失败原因"},
+	//	{"key": "filter_developer", "label": "BUG初筛责任人"},
+	//	{"key": "assign_reason", "label": "BUG流转说明"},
+	//	{"key": "fix_developer", "label": "BUG修复责任人"},
+	//	{"key": "bug_status", "label": "BUG解决状态"},
+	//}
+	model := models.NewTaskDataModel()
+	result, _ := model.GetTaskDatas(0, 100, "types='base_skill'")
+	headers := make([]map[string]string, 0)
+	json.Unmarshal([]byte(result[0].Headers), &headers)
 	data, _ := models.ReporterDB.MongoFind(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId})
 	Skill.SummaryFile = WriteResultExcel(SystemSkill, Skill.JobInstanceId, Skill.Summary, headers, data)
 }

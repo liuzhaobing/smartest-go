@@ -1,6 +1,7 @@
 package task
 
 import (
+	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
@@ -8,18 +9,22 @@ import (
 )
 
 func (KG *KGTask) writeKGResultExcel() {
-	headers := []map[string]string{
-		{"key": "id", "label": "用例编号"},
-		{"key": "question", "label": "测试语句"},
-		{"key": "answer", "label": "期望答复"},
-		{"key": "act_answer", "label": "实际答复"},
-		{"key": "is_pass", "label": "是否通过"},
-		{"key": "edg_cost", "label": "端测耗时(ms)"},
-		{"key": "trace_id", "label": "TraceID"},
-		{"key": "source", "label": "命中类型"},
-		{"key": "resp_json", "label": "返回JSON"},
-		{"key": "execute_time", "label": "执行时间"},
-	}
+	//headers := []map[string]string{
+	//	{"key": "id", "label": "用例编号"},
+	//	{"key": "question", "label": "测试语句"},
+	//	{"key": "answer", "label": "期望答复"},
+	//	{"key": "act_answer", "label": "实际答复"},
+	//	{"key": "is_pass", "label": "是否通过"},
+	//	{"key": "edg_cost", "label": "端测耗时(ms)"},
+	//	{"key": "trace_id", "label": "TraceID"},
+	//	{"key": "source", "label": "命中类型"},
+	//	{"key": "resp_json", "label": "返回JSON"},
+	//	{"key": "execute_time", "label": "执行时间"},
+	//}
+	model := models.NewTaskDataModel()
+	result, _ := model.GetTaskDatas(0, 100, "types='base_kg'")
+	headers := make([]map[string]string, 0)
+	json.Unmarshal([]byte(result[0].Headers), &headers)
 	data, _ := models.ReporterDB.MongoFind(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId})
 	KG.SummaryFile = WriteResultExcel(KnowledgeGraph, KG.JobInstanceId, KG.Summary, headers, data)
 }

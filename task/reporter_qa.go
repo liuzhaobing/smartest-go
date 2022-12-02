@@ -1,6 +1,7 @@
 package task
 
 import (
+	"encoding/json"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
@@ -8,22 +9,27 @@ import (
 )
 
 func (QA *QATask) writeQAResultExcel() {
-	headers := []map[string]string{
-		{"key": "id", "label": "用例编号"},
-		{"key": "question", "label": "测试语句"},
-		{"key": "exp_answer", "label": "期望回复（包含指定内容）"},
-		{"key": "act_answer", "label": "实际回复"},
-		{"key": "source", "label": "回复source"},
-		{"key": "exp_group_id", "label": "QA的期望GroupId"},
-		{"key": "act_group_id", "label": "QA的GroupId"},
-		{"key": "is_pass", "label": "是否通过"},
-		{"key": "is_group_id_pass", "label": "group_id是否通过"},
-		{"key": "is_full_pass", "label": "是否完全匹配"},
-		{"key": "is_smoke", "label": "发布必测"},
-		{"key": "edg_cost", "label": "端测耗时(ms)"},
-		{"key": "trace_id", "label": "TranceId"},
-		{"key": "algo_score", "label": "算法得分score"},
-	}
+	//headers := []map[string]string{
+	//	{"key": "id", "label": "用例编号"},
+	//	{"key": "question", "label": "测试语句"},
+	//	{"key": "exp_answer", "label": "期望回复（包含指定内容）"},
+	//	{"key": "act_answer", "label": "实际回复"},
+	//	{"key": "source", "label": "回复source"},
+	//	{"key": "exp_group_id", "label": "QA的期望GroupId"},
+	//	{"key": "act_group_id", "label": "QA的GroupId"},
+	//	{"key": "is_pass", "label": "是否通过"},
+	//	{"key": "is_group_id_pass", "label": "group_id是否通过"},
+	//	{"key": "is_full_pass", "label": "是否完全匹配"},
+	//	{"key": "is_smoke", "label": "发布必测"},
+	//	{"key": "edg_cost", "label": "端测耗时(ms)"},
+	//	{"key": "trace_id", "label": "TranceId"},
+	//	{"key": "algo_score", "label": "算法得分score"},
+	//}
+	model := models.NewTaskDataModel()
+	result, _ := model.GetTaskDatas(0, 100, "types='base_qa'")
+	headers := make([]map[string]string, 0)
+	json.Unmarshal([]byte(result[0].Headers), &headers)
+
 	data, _ := models.ReporterDB.MongoFind(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId})
 	QA.SummaryFile = WriteResultExcel(CommonQA, QA.JobInstanceId, QA.Summary, headers, data)
 }

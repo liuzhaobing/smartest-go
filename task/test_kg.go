@@ -304,7 +304,6 @@ func (KG *KGTask) call(req *KGTaskReq) *KGTaskOnceResp {
 			KG.WrongCount++
 		}
 	}
-	fmt.Println(Res.Res.ActAnswer)
 	return Res
 }
 

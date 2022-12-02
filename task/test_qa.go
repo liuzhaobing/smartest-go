@@ -328,7 +328,6 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 
 	Res.Res.ActAnswer = resp.Tts[0].Text
 
-	fmt.Println(Res.Res.ActAnswer)
 	Res.Res.Source = resp.Source
 	if resp.HitLog.Fields["domain"] != nil && resp.HitLog.Fields["domain"].GetStringValue() != "" {
 		Res.Res.Source += "/"

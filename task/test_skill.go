@@ -70,6 +70,8 @@ type SkillTaskRes struct { // 从响应体收集到的数据
 	ActParam        string // tts.action.params下的意图收集
 	ActInputContext string
 	NLUDebugInfo    string
+	EntityTrie      string
+	NERTrie         string
 	TraceId         string
 }
 
@@ -115,6 +117,8 @@ type SkillResults struct {
 	TraceId         string  `json:"trace_id,omitempty"      bson:"trace_id,omitempty"`
 	ActRobotType    string  `json:"act_robot_type,omitempty"      bson:"act_robot_type,omitempty"`
 	NLUDebugInfo    string  `json:"nlu_debug_info,omitempty"      bson:"nlu_debug_info,omitempty"`
+	EntityTrie      string  `json:"entity_trie,omitempty"      bson:"entity_trie,omitempty"`
+	NERTrie         string  `json:"ner_trie,omitempty"      bson:"ner_trie,omitempty"`
 	FailReason      string  `json:"fail_reason,omitempty"      bson:"fail_reason,omitempty"`
 	FilterDeveloper string  `json:"filter_developer,omitempty"      bson:"filter_developer,omitempty"`
 	AssignReason    string  `json:"assign_reason,omitempty"      bson:"assign_reason,omitempty"`
@@ -133,6 +137,8 @@ type SkillTask struct {
 	RightCount            int
 	WrongCount            int
 	JobInstanceId         string
+	Summary               string
+	SummaryFile           string
 	startTime             time.Time
 	endTime               time.Time
 	cost                  time.Duration
@@ -280,6 +286,8 @@ func (Skill *SkillTask) run() {
 			TraceId:         resp.Res.TraceId,
 			ActRobotType:    resp.Req.RobotType,
 			NLUDebugInfo:    resp.Res.NLUDebugInfo,
+			EntityTrie:      resp.Res.EntityTrie,
+			NERTrie:         resp.Res.NERTrie,
 			FailReason:      resp.FailReason,
 			FilterDeveloper: resp.Developer,
 			AssignReason:    "",
@@ -295,6 +303,8 @@ func (Skill *SkillTask) end() {
 		return
 	}
 	Skill.endTime = time.Now()
+	Skill.getResultSummary()
+	Skill.writeSkillResultExcel()
 	Skill.sendReport()
 }
 
@@ -720,6 +730,8 @@ func (Skill *SkillTask) debugModelCheck(Res *SkillTaskOnceResp) {
 			Res.Req.Query,
 			Res.Res.TraceId+"_nlu",
 			Res.Res.ActInputContext)
+		Res.Res.EntityTrie = gjson.Get(Res.Res.NLUDebugInfo, "debugInfo.entity_trie").String()
+		Res.Res.NERTrie = gjson.Get(Res.Res.NLUDebugInfo, "debugInfo.ner_entity").String()
 	}
 }
 

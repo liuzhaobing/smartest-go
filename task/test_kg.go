@@ -131,6 +131,8 @@ type KGTask struct {
 	RightCount         int
 	WrongCount         int
 	JobInstanceId      string
+	Summary            string
+	SummaryFile        string
 	KGCaseGetterMongo  *mongo.MongoInfo
 	startTime          time.Time
 	endTime            time.Time
@@ -249,6 +251,8 @@ func (KG *KGTask) end() {
 		return
 	}
 	KG.endTime = time.Now()
+	KG.getResultSummary()
+	KG.writeKGResultExcel()
 	KG.sendReport()
 }
 

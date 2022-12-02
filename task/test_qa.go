@@ -92,6 +92,8 @@ type QATask struct {
 	RespChan           chan *QATaskOnceResp
 	RightCount         int
 	WrongCount         int
+	Summary            string
+	SummaryFile        string
 	JobInstanceId      string
 	startTime          time.Time
 	endTime            time.Time
@@ -234,6 +236,8 @@ func (QA *QATask) end() {
 		return
 	}
 	QA.endTime = time.Now()
+	QA.getResultSummary()
+	QA.writeQAResultExcel()
 	QA.sendReport()
 }
 

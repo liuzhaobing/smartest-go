@@ -162,7 +162,7 @@ func InitRouter() *gin.Engine {
 	{
 		apiDataV1.GET("", Validation(&v1.ListData{}), v1.ListDatas)
 		apiDataV1.PUT("/:id", Validation(&v1.AddData{}), v1.UpdateDatas)
-		apiDataV1.DELETE("/:id", v1.RemoveServers)
+		apiDataV1.DELETE("/:id", v1.RemoveDatas)
 		apiDataV1.POST("", Validation(&v1.AddData{}), v1.AddDatas)
 	}
 

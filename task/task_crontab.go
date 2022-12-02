@@ -2,11 +2,7 @@ package task
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"github.com/robfig/cron/v3"
-	"smartest-go/pkg/app"
-	"smartest-go/pkg/e"
-	util "smartest-go/pkg/util/const"
 	"time"
 )
 
@@ -84,43 +80,4 @@ func init() {
 	CM.maxTask = 10000
 
 	CM.CornServer.Start()
-}
-
-/*
-定时器相关操作
-*/
-
-// ListCronPlan 从定时器中查询计划列表
-func ListCronPlan(context *gin.Context) {
-	cronList, err := CM.GetCronTaskList()
-	if err != nil {
-		app.ErrorResp(context, e.ERROR, err.Error(), nil)
-		return
-	}
-	app.SuccessResp(context, cronList)
-}
-
-// RemoveCronPlan 从定时器中移除单个计划
-func RemoveCronPlan(context *gin.Context) {
-	req := context.MustGet(util.REQUEST_KEY).(*NameOfTask)
-	_, err := CM.RemoveCronTaskByName(req.TaskName)
-	if err != nil {
-		app.ErrorResp(context, e.ERROR, err.Error(), nil)
-		return
-	}
-	app.SuccessResp(context, nil)
-}
-
-// AddCronPlan 新增单个计划到定时器
-func AddCronPlan(context *gin.Context) {
-	req := context.MustGet(util.REQUEST_KEY).(*AddTask)
-	if req.IsCrontab == "yes" {
-		job := InitTaskModel(req)
-		_, err := CM.AddCronTask(req, job)
-		if err != nil {
-			app.ErrorResp(context, e.ERROR, err.Error(), nil)
-			return
-		}
-	}
-	app.SuccessResp(context, req)
 }

@@ -115,9 +115,9 @@ func InitRouter() *gin.Engine {
 	apiCron := apiV1.Group("/crontab")
 	apiCron.Use()
 	{
-		apiCron.GET("", task.ListCronPlan)                                   // 获取定时任务列表
-		apiCron.POST("", Validation(&task.AddTask{}), task.AddCronPlan)      // 添加定时任务  不开放给前端
-		apiCron.PUT("", Validation(&task.NameOfTask{}), task.RemoveCronPlan) // 修改定时任务  不开放给前端
+		apiCron.GET("", v1.ListCronPlan)                                   // 获取定时任务列表
+		apiCron.POST("", Validation(&task.AddTask{}), v1.AddCronPlan)      // 添加定时任务  不开放给前端
+		apiCron.PUT("", Validation(&task.NameOfTask{}), v1.RemoveCronPlan) // 修改定时任务  不开放给前端
 	}
 
 	// 测试调试用的路由

@@ -3,10 +3,12 @@ package task
 import (
 	"context"
 	"fmt"
+	"github.com/360EntSecGroup-Skylar/excelize"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"math/rand"
 	"smartest-go/pkg/mongo"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -326,4 +328,46 @@ func (KG *KGTask) mockQueryOneStep(ctx context.Context) {
 			KG.mockQueryOneStep(ctx)
 		}
 	}
+}
+
+func ExcelKGReader(fileName, sheetName string) (req []*KGTaskReq) {
+	if !strings.Contains(fileName, "./upload/") {
+		fileName = "./upload/" + fileName
+	}
+	f, err := excelize.OpenFile(fileName)
+	if err != nil {
+		return
+	}
+	rows := f.GetRows(sheetName)
+
+	tableHeader := make(map[int]string)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
+		}
+		tmpReq := &KGTaskReq{
+			Id:           0,
+			Query:        "",
+			ExpectAnswer: "",
+		}
+		for i, cellValue := range row {
+			// 记录表数据
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
+			}
+			if tableHeader[i] == "query" {
+				tmpReq.Query = cellValue
+			}
+			if tableHeader[i] == "expect_answer" {
+				tmpReq.ExpectAnswer = cellValue
+			}
+		}
+		req = append(req, tmpReq)
+	}
+	return
 }

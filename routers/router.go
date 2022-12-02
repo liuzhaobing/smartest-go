@@ -96,13 +96,13 @@ func InitRouter() *gin.Engine {
 	apiPlan := apiV1.Group("/plan")
 	apiPlan.Use()
 	{
-		apiPlan.GET("", Validation(&task.ListTask{}), task.ListPlan)
-		apiPlan.POST("", Validation(&task.AddTask{}), task.AddPlan)
-		apiPlan.PUT("/:id", Validation(&task.AddTask{}), task.UpdatePlan)
-		apiPlan.DELETE("/:id", task.RemovePlan)
-		apiPlan.GET("/:id", task.GetPlanInfo)
-		apiPlan.POST("/:id", task.RunPlan)
-		apiPlan.PUT("", Validation(&task.NameOfTask{}), task.TerminatePlan)
+		apiPlan.GET("", Validation(&task.ListTask{}), v1.ListPlan)
+		apiPlan.POST("", Validation(&task.AddTask{}), v1.AddPlan)
+		apiPlan.PUT("/:id", Validation(&task.AddTask{}), v1.UpdatePlan)
+		apiPlan.DELETE("/:id", v1.RemovePlan)
+		apiPlan.GET("/:id", v1.GetPlanInfo)
+		apiPlan.POST("/:id", v1.RunPlan)
+		apiPlan.PUT("", Validation(&task.NameOfTask{}), v1.TerminatePlan)
 	}
 
 	apiHistory := apiV1.Group("/history")

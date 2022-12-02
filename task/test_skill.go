@@ -299,13 +299,13 @@ func (Skill *SkillTask) run() {
 }
 
 func (Skill *SkillTask) end() {
-	if success, _ := EndMissionFlag(Skill.SkillConfig.TaskName); !success {
-		return
-	}
 	Skill.endTime = time.Now()
 	Skill.getResultSummary()
 	Skill.writeSkillResultExcel()
 	Skill.sendReport()
+	if success, _ := EndMissionFlag(Skill.SkillConfig.TaskName, Skill.Summary, Skill.SummaryFile); !success {
+		return
+	}
 }
 
 func (Skill *SkillTask) stop() {

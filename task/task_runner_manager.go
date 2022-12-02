@@ -24,6 +24,7 @@ type TaskInfo struct {
 	Progress        string             `json:"progress" bson:"progress" form:"progress,omitempty"`                         // 测试进度 225/225
 	Accuracy        float32            `json:"accuracy" bson:"accuracy" form:"accuracy,omitempty"`                         // 准确率
 	Message         string             `json:"message" bson:"message" form:"message,omitempty"`                            // 其他消息
+	ResultFile      string             `json:"result_file" bson:"result_file" form:"result_file,omitempty"`                // 文件地址
 	StartTime       string             `json:"start_time" bson:"start_time" form:"start_time,omitempty"`                   // 开始时间
 	EndTime         string             `json:"end_time" bson:"end_time" form:"end_time,omitempty"`                         // 结束时间
 	Cancel          context.CancelFunc `json:"-" bson:"-" form:"-"`
@@ -181,11 +182,12 @@ func RunMissionFlag(taskName string) (bool, *TaskInfo) {
 }
 
 // EndMissionFlag 任务完成时 保存记录  //512准备中 -> 256执行中 -> 128已停止 -> 64失败 -> 32成功
-func EndMissionFlag(taskName string) (success bool, info *TaskInfo) {
+func EndMissionFlag(taskName, resultSummary, resultFile string) (success bool, info *TaskInfo) {
 	value, ok := taskInfoMap[taskName]
 	if ok && value.Status == 256 { // 只有执行中的任务才能结束 end()
 		value.Status = 32
-		value.Message = "任务执行结束!"
+		value.Message = resultSummary
+		value.ResultFile = resultFile
 		value.EndTime = time.Now().Format("2006-01-02 15:04:05")
 		models.ReporterDB.MongoInsertOne(TasksTable, value)
 		delete(taskInfoMap, taskName)

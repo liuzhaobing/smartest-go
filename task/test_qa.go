@@ -232,13 +232,13 @@ func (QA *QATask) run() {
 }
 
 func (QA *QATask) end() {
-	if success, _ := EndMissionFlag(QA.QAConfig.TaskName); !success {
-		return
-	}
 	QA.endTime = time.Now()
 	QA.getResultSummary()
 	QA.writeQAResultExcel()
 	QA.sendReport()
+	if success, _ := EndMissionFlag(QA.QAConfig.TaskName, QA.Summary, QA.SummaryFile); !success {
+		return
+	}
 }
 
 func (QA *QATask) stop() {

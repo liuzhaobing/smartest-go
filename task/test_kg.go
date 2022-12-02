@@ -247,13 +247,13 @@ func (KG *KGTask) run() {
 }
 
 func (KG *KGTask) end() {
-	if success, _ := EndMissionFlag(KG.KGConfig.TaskName); !success {
-		return
-	}
 	KG.endTime = time.Now()
 	KG.getResultSummary()
 	KG.writeKGResultExcel()
 	KG.sendReport()
+	if success, _ := EndMissionFlag(KG.KGConfig.TaskName, KG.Summary, KG.SummaryFile); !success {
+		return
+	}
 }
 
 func (KG *KGTask) stop() {

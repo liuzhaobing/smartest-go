@@ -8,7 +8,7 @@ import (
 	fmt "fmt"
 	types "github.com/gogo/protobuf/types"
 	proto "github.com/golang/protobuf/proto"
-	common "gocrontask/proto/common"
+	common "smartest-go/proto/common"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

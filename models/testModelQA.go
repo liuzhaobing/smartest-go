@@ -3,8 +3,10 @@ package models
 import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/jinzhu/gorm"
-	"smartest-go/pkg/logf"
+	"smartest-go/pkg/util"
 	"strconv"
+	_ "strings"
+	"time"
 )
 
 type QaBaseTest struct {
@@ -141,55 +143,50 @@ func (a *QaBaseTest) GetGroupQABaseTest(sql string, values ...interface{}) ([]*Q
 }
 
 func (a *QaBaseTest) ExcelToDB(filename, sheet string) {
-	//open file
 	f, err := excelize.OpenFile(filename)
 	if err != nil {
-		logf.Debug(err)
 		return
 	}
-	rows := f.GetRows(sheet)
 	tx := GetSessionTx(a.Session)
-	//read excel
-	for _, row := range rows {
-		tmpQReq := QaBaseTest{
-			Id:         0,
-			Question:   "",
-			AnswerList: "",
-			QaType:     "",
-			QaSource:   "",
-			QaGroupId:  0,
-			RobotType:  "",
+	nowTime := util.JSONTime{Time: time.Now()}
+	rows := f.GetRows(sheet)
+
+	tableHeader := make(map[int]string)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
 		}
-		for i, colCell := range row {
-			if i == 0 {
-				id, _ := strconv.ParseInt(colCell, 10, 64)
-				tmpQReq.Id = id
+		tmpReq := QaBaseTest{}
+		for i, cellValue := range row {
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
 			}
-			if i == 1 {
-				tmpQReq.Question = colCell
+			if tableHeader[i] == "question" {
+				tmpReq.Question = cellValue // 这里先不去处理&& 在pre阶段去统一处理
 			}
-			if i == 2 {
-				tmpQReq.AnswerList = colCell
+			if tableHeader[i] == "answer_list" {
+				tmpReq.AnswerList = cellValue
 			}
-			if i == 3 {
-				tmpQReq.QaType = colCell
+			if tableHeader[i] == "qa_group_id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.QaGroupId = int64(num)
 			}
-			if i == 4 {
-				tmpQReq.QaSource = colCell
+			if tableHeader[i] == "robot_type" {
+				tmpReq.RobotType = cellValue
 			}
-			if i == 5 {
-				QaGroupId, _ := strconv.ParseInt(colCell, 10, 64)
-				tmpQReq.QaGroupId = QaGroupId
+			if tableHeader[i] == "is_smoke" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.IsSmoke = num
 			}
-			if i == 6 {
-				tmpQReq.RobotType = colCell
-			}
-			if i == 7 {
-				tmpQReq.RobotId = colCell
-			}
+			tmpReq.CreateTime = JSONTime(nowTime)
+			tmpReq.UpdateTime = JSONTime(nowTime)
 		}
-		//write to db
-		tx.Create(tmpQReq)
+		tx.Create(tmpReq)
 	}
 
 }

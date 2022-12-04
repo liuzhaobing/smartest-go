@@ -3,7 +3,6 @@ package models
 import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"github.com/jinzhu/gorm"
-	"smartest-go/pkg/logf"
 	"smartest-go/pkg/util"
 	"strconv"
 	"time"
@@ -159,78 +158,82 @@ func (a *SkillBaseTest) GetGroupSkillBaseTest(sql string, values ...interface{})
 
 // ExcelToDB import excel data to mysql database
 func (a *SkillBaseTest) ExcelToDB(filename, sheet string) {
-	//open file
 	f, err := excelize.OpenFile(filename)
 	if err != nil {
-		logf.Debug(err)
 		return
 	}
+	tx := GetSessionTx(a.Session)
 	nowTime := util.JSONTime{Time: time.Now()}
 	rows := f.GetRows(sheet)
-	tx := GetSessionTx(a.Session)
-	//read excel
-	for _, row := range rows {
-		tmpSReq := &SkillBaseTest{
-			Id:          0,
-			Question:    "",
-			Source:      "",
-			Domain:      "",
-			Intent:      "",
-			SkillSource: "",
-			SkillCn:     "",
-			RobotType:   "",
-			RobotId:     "",
-			UseTest:     1,
-			ParamInfo:   "",
-			CaseVersion: 0,
-		}
-		for i, colCell := range row {
-			if i == 0 {
-				id, _ := strconv.ParseInt(colCell, 10, 64)
-				tmpSReq.Id = id
-			}
-			if i == 1 {
-				tmpSReq.Question = colCell
-			}
-			if i == 2 {
-				tmpSReq.Source = colCell
-			}
-			if i == 3 {
-				tmpSReq.Domain = colCell
-			}
-			if i == 4 {
-				tmpSReq.Intent = colCell
-			}
-			if i == 5 {
-				tmpSReq.SkillSource = colCell
-				if tmpSReq.SkillSource == "" {
-					tmpSReq.SkillSource = "Excel导入"
-				}
-			}
-			if i == 6 {
-				tmpSReq.SkillCn = colCell
-			}
-			if i == 7 {
-				tmpSReq.RobotType = colCell
-			}
-			if i == 8 {
-				tmpSReq.RobotId = colCell
-			}
-			if i == 9 {
-				useTest, _ := strconv.Atoi(colCell)
-				tmpSReq.UseTest = useTest
-			}
-			if i == 12 {
-				tmpSReq.ParamInfo = colCell
-			}
-			if i == 13 {
-				version, _ := strconv.ParseFloat(colCell, 32)
-				tmpSReq.CaseVersion = float32(version)
-			}
-			tmpSReq.CreateTime = nowTime
-			tmpSReq.UpdateTime = nowTime
 
+	tableHeader := make(map[int]string)
+	for index, row := range rows {
+		if index == 0 {
+			// 记录表头
+			for i, cellValue := range row {
+				tableHeader[i] = cellValue
+			}
+			continue
 		}
-		tx.Create(tmpSReq)
+		tmpReq := &SkillBaseTest{}
+		for i, cellValue := range row {
+			// 记录表数据
+			if tableHeader[i] == "id" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.Id = int64(num)
+			}
+			if tableHeader[i] == "question" {
+				tmpReq.Question = cellValue
+			}
+			if tableHeader[i] == "source" {
+				tmpReq.Source = cellValue
+			}
+
+			if tableHeader[i] == "domain" {
+				tmpReq.Domain = cellValue
+			}
+
+			if tableHeader[i] == "intent" {
+				tmpReq.Intent = cellValue
+			}
+
+			if tableHeader[i] == "skill_source" {
+				tmpReq.SkillSource = cellValue
+			}
+
+			if tableHeader[i] == "skill_cn" {
+				tmpReq.SkillCn = cellValue
+			}
+
+			if tableHeader[i] == "robot_id" {
+				tmpReq.RobotId = cellValue
+			}
+
+			if tableHeader[i] == "usetest" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.UseTest = num
+			}
+
+			if tableHeader[i] == "is_smoke" {
+				num, _ := strconv.Atoi(cellValue)
+				tmpReq.IsSmoke = num
+			}
+
+			if tableHeader[i] == "paraminfo" {
+				tmpReq.ParamInfo = cellValue
+			}
+
+			if tableHeader[i] == "case_version" {
+				num64, _ := strconv.ParseFloat(cellValue, 32)
+				tmpReq.CaseVersion = float32(num64)
+			}
+
+			if tableHeader[i] == "robot_type" {
+				tmpReq.RobotType = cellValue
+			}
+			tmpReq.CreateTime = nowTime
+			tmpReq.UpdateTime = nowTime
+		}
+		tx.Create(tmpReq)
 	}
 }

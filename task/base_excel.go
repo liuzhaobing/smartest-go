@@ -21,7 +21,7 @@ func WriteResultExcel(taskType, JobInstanceId, summary string, headers []map[str
 	// 首行summary
 	f.SetCellValue(sheetName1, "A1", summary)
 	f.SetRowHeight(sheetName1, 1, 60)
-	f.MergeCell(sheetName1, "A1", "F1")
+	f.MergeCell(sheetName1, "A1", "K1")
 
 	// 表头
 	for index, header := range headers {

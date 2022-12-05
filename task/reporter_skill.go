@@ -6,7 +6,54 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
 	"smartest-go/pkg/logf"
+	"time"
 )
+
+type SkillSummaryToMongo struct {
+	TaskName                       string      `bson:"task_name"`
+	TaskType                       string      `bson:"task_type"`
+	JobInstanceId                  string      `bson:"job_instance_id"`
+	TaskConfig                     string      `bson:"task_config"`
+	MaxCost                        interface{} `bson:"max_cost"`
+	MinCost                        interface{} `bson:"min_cost"`
+	AvgCost                        interface{} `bson:"avg_cost"`
+	OverView                       string      `bson:"over_view"`
+	StartTime                      time.Time   `bson:"start_time"`
+	EndTime                        time.Time   `bson:"end_time"`
+	SmokeTotal                     int64       `bson:"smoke_total"`
+	SmokeIntentPass                int64       `bson:"smoke_intent_pass"`
+	SmokeIntentFail                int64       `bson:"smoke_intent_fail"`
+	SmokeIntentAccuracy            float32     `bson:"smoke_intent_accuracy"`
+	SmokeParaminfoPass             int64       `bson:"smoke_paraminfo_pass"`
+	SmokeParaminfoFail             int64       `bson:"smoke_paraminfo_fail"`
+	SmokeParaminfoAccuracy         float32     `bson:"smoke_paraminfo_accuracy"`
+	SmokeAlgoPercent               float32     `bson:"smoke_algo_percent"`
+	SmokeRegexPercent              float32     `bson:"smoke_regex_percent"`
+	FirstVersion                   float32     `bson:"first_version"`
+	FirstVersionTotal              int64       `bson:"first_version_total"`
+	FirstVersionIntentPass         int64       `bson:"first_version_intent_pass"`
+	FirstVersionIntentFail         int64       `bson:"first_version_intent_fail"`
+	FirstVersionIntentAccuracy     float32     `bson:"first_version_intent_accuracy"`
+	FirstVersionParaminfoPass      int64       `bson:"first_version_paraminfo_pass"`
+	FirstVersionParaminfoFail      int64       `bson:"first_version_paraminfo_fail"`
+	FirstVersionParaminfoAccuracy  float32     `bson:"first_version_paraminfo_accuracy"`
+	FirstVersionAlgoCount          int64       `bson:"first_version_algo_count"`
+	FirstVersionRegexCount         int64       `bson:"first_version_regex_count"`
+	FirstVersionAlgoPercent        float32     `bson:"first_version_algo_percent"`
+	FirstVersionRegexPercent       float32     `bson:"first_version_regex_percent"`
+	SecondVersion                  float32     `bson:"second_version"`
+	SecondVersionTotal             int64       `bson:"second_version_total"`
+	SecondVersionIntentPass        int64       `bson:"second_version_intent_pass"`
+	SecondVersionIntentFail        int64       `bson:"second_version_intent_fail"`
+	SecondVersionIntentAccuracy    float32     `bson:"second_version_intent_accuracy"`
+	SecondVersionParaminfoPass     int64       `bson:"second_version_paraminfo_pass"`
+	SecondVersionParaminfoFail     int64       `bson:"second_version_paraminfo_fail"`
+	SecondVersionParaminfoAccuracy float32     `bson:"second_version_paraminfo_accuracy"`
+	SecondVersionAlgoCount         int64       `bson:"second_version_algo_count"`
+	SecondVersionRegexCount        int64       `bson:"second_version_regex_count"`
+	SecondVersionAlgoPercent       float32     `bson:"second_version_algo_percent"`
+	SecondVersionRegexPercent      float32     `bson:"second_version_regex_percent"`
+}
 
 func (Skill *SkillTask) writeSkillResultExcel() {
 	//headers := []map[string]string{
@@ -53,8 +100,14 @@ func (Skill *SkillTask) writeSkillResultExcel() {
 }
 
 func (Skill *SkillTask) getResultSummary() {
+	mongoSummary := &SkillSummaryToMongo{StartTime: Skill.startTime, EndTime: Skill.endTime}
 	// 标题
-	summary := fmt.Sprintf("%s %s\n", Skill.SkillConfig.TaskName, Skill.JobInstanceId)
+	mongoSummary.TaskName = Skill.SkillConfig.TaskName
+	mongoSummary.JobInstanceId = Skill.JobInstanceId
+	tmpC, _ := json.Marshal(Skill.SkillConfig)
+	mongoSummary.TaskConfig = string(tmpC)
+	mongoSummary.TaskType = SystemSkill
+	summary := fmt.Sprintf("%s %s\n", mongoSummary.TaskName, mongoSummary.JobInstanceId)
 
 	// 耗时统计
 	costInfo, _ := models.ReporterDB.MongoAggregate(SkillResultsTable, []bson.M{
@@ -65,19 +118,30 @@ func (Skill *SkillTask) getResultSummary() {
 			"min_cost": bson.M{"$min": "$edg_cost"},
 			"avg_cost": bson.M{"$avg": "$edg_cost"},
 		}}})
-	summary += fmt.Sprintf("耗时统计:最大耗时:%d, 最小耗时:%d, 平均耗时:%.2f\n", costInfo[0].Map()["max_cost"], costInfo[0].Map()["min_cost"], costInfo[0].Map()["avg_cost"])
+	mongoSummary.MaxCost = costInfo[0].Map()["max_cost"]
+	mongoSummary.MinCost = costInfo[0].Map()["min_cost"]
+	mongoSummary.AvgCost = costInfo[0].Map()["avg_cost"]
+	summary += fmt.Sprintf("耗时统计:最大耗时:%d, 最小耗时:%d, 平均耗时:%.2f\n", mongoSummary.MaxCost, mongoSummary.MinCost, mongoSummary.AvgCost)
 
 	// 发布必测统计
 	isSmokeTotal, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "is_smoke": 1})
-	if isSmokeTotal != 0 {
+	if isSmokeTotal > 0 {
 		smokeIntentPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "is_smoke": 1, "is_pass": true})
 		smokeParamPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "is_smoke": 1, "param_info_is_pass": true})
+
+		mongoSummary.SmokeTotal = isSmokeTotal
+		mongoSummary.SmokeIntentPass = smokeIntentPass
+		mongoSummary.SmokeIntentFail = isSmokeTotal - smokeIntentPass
+		mongoSummary.SmokeIntentAccuracy = float32(mongoSummary.SmokeIntentPass) / float32(mongoSummary.SmokeTotal)
+		mongoSummary.SmokeParaminfoPass = smokeParamPass
+		mongoSummary.SmokeParaminfoFail = isSmokeTotal - smokeParamPass
+		mongoSummary.SmokeParaminfoAccuracy = float32(mongoSummary.SmokeParaminfoPass) / float32(mongoSummary.SmokeTotal)
 		summary += fmt.Sprintf("★★★发布必测用例总数:%d,错误数:%d,意图正确率:%f,槽位正确率:%f,错误数:%d\n",
-			isSmokeTotal,
-			isSmokeTotal-smokeIntentPass,
-			float32(smokeIntentPass)/float32(isSmokeTotal),
-			float32(smokeParamPass)/float32(isSmokeTotal),
-			isSmokeTotal-smokeParamPass)
+			mongoSummary.SmokeTotal,
+			mongoSummary.SmokeIntentFail,
+			mongoSummary.SmokeIntentAccuracy,
+			mongoSummary.SmokeParaminfoAccuracy,
+			mongoSummary.SmokeParaminfoFail)
 	}
 
 	// 查询版本信息
@@ -87,52 +151,73 @@ func (Skill *SkillTask) getResultSummary() {
 		{"$sort": bson.M{"_id.case_version": -1}},
 		{"$project": bson.M{"_id": 0, "case_version": "$_id.case_version"}},
 	})
-	FirstVersion := 0.0
-	SecondVersion := 0.0
+
 	if len(caseVersionInfo) > 1 {
 		if caseVersionInfo[0].Map()["case_version"] != nil {
-			FirstVersion, _ = (caseVersionInfo[0].Map()["case_version"]).(float64)
+			mongoSummary.FirstVersion, _ = (caseVersionInfo[0].Map()["case_version"]).(float32)
 		}
 		if caseVersionInfo[1].Map()["case_version"] != nil {
-			SecondVersion, _ = (caseVersionInfo[1].Map()["case_version"]).(float64)
+			mongoSummary.SecondVersion, _ = (caseVersionInfo[1].Map()["case_version"]).(float32)
 		}
 	}
 
 	// 最高版本统计
-	firstVersionTotal, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId})
-	firstVersionIntentPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "is_pass": true})
-	firstVersionParamPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "param_info_is_pass": true})
-	firstVersionRegexCount, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "algo": "regex"})
+	mongoSummary.FirstVersionTotal, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId})
+	mongoSummary.FirstVersionIntentPass, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "is_pass": true})
+	mongoSummary.FirstVersionIntentFail = mongoSummary.FirstVersionTotal - mongoSummary.FirstVersionIntentPass
+	mongoSummary.FirstVersionIntentAccuracy = float32(mongoSummary.FirstVersionIntentPass) / float32(mongoSummary.FirstVersionTotal)
+	mongoSummary.FirstVersionParaminfoPass, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "param_info_is_pass": true})
+	mongoSummary.FirstVersionParaminfoFail = mongoSummary.FirstVersionTotal - mongoSummary.FirstVersionParaminfoPass
+	mongoSummary.FirstVersionParaminfoAccuracy = float32(mongoSummary.FirstVersionParaminfoPass) / float32(mongoSummary.FirstVersionTotal)
+
 	firstVersionSystemCount, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "act_source": "system_service"})
+	mongoSummary.FirstVersionRegexCount, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"job_instance_id": Skill.JobInstanceId, "algo": "regex"})
+	mongoSummary.FirstVersionAlgoCount = firstVersionSystemCount - mongoSummary.FirstVersionRegexCount
+	mongoSummary.FirstVersionRegexPercent = float32(mongoSummary.FirstVersionRegexCount) / float32(firstVersionSystemCount)
+	mongoSummary.FirstVersionAlgoPercent = float32(mongoSummary.FirstVersionAlgoCount) / float32(firstVersionSystemCount)
+
 	summary += fmt.Sprintf("用例版本:%.2f,用例总数:%d,错误数:%d,意图正确率:%f,槽位正确率:%f,意图支撑中算法占比%f,工程模板占比%f\n",
-		FirstVersion,
-		firstVersionTotal,
-		firstVersionTotal-firstVersionIntentPass,
-		float32(firstVersionIntentPass)/float32(firstVersionTotal),
-		float32(firstVersionParamPass)/float32(firstVersionTotal),
-		1-float32(firstVersionRegexCount)/float32(firstVersionSystemCount),
-		float32(firstVersionRegexCount)/float32(firstVersionSystemCount))
+		mongoSummary.FirstVersion,
+		mongoSummary.FirstVersionTotal,
+		mongoSummary.FirstVersionIntentFail,
+		mongoSummary.FirstVersionIntentAccuracy,
+		mongoSummary.FirstVersionParaminfoAccuracy,
+		mongoSummary.FirstVersionAlgoPercent,
+		mongoSummary.FirstVersionRegexPercent)
 
 	// 第二版本统计
-	if SecondVersion != 0.0 {
-		secondVersionTotal, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": SecondVersion}, "job_instance_id": Skill.JobInstanceId})
-		secondVersionIntentPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": SecondVersion}, "job_instance_id": Skill.JobInstanceId, "is_pass": true})
-		secondVersionParamPass, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": SecondVersion}, "job_instance_id": Skill.JobInstanceId, "param_info_is_pass": true})
-		secondVersionRegexCount, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": SecondVersion}, "job_instance_id": Skill.JobInstanceId, "algo": "regex"})
-		secondVersionSystemCount, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": SecondVersion}, "job_instance_id": Skill.JobInstanceId, "act_source": "system_service"})
+	if mongoSummary.SecondVersion > 0 {
+		mongoSummary.SecondVersionTotal, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": mongoSummary.SecondVersion}, "job_instance_id": mongoSummary.JobInstanceId})
+		mongoSummary.SecondVersionIntentPass, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": mongoSummary.SecondVersion}, "job_instance_id": mongoSummary.JobInstanceId, "is_pass": true})
+		mongoSummary.SecondVersionIntentFail = mongoSummary.SecondVersionTotal - mongoSummary.SecondVersionIntentPass
+		mongoSummary.SecondVersionIntentAccuracy = float32(mongoSummary.SecondVersionIntentPass) / float32(mongoSummary.SecondVersionTotal)
+		mongoSummary.SecondVersionParaminfoPass, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": mongoSummary.SecondVersion}, "job_instance_id": mongoSummary.JobInstanceId, "param_info_is_pass": true})
+		mongoSummary.SecondVersionParaminfoFail = mongoSummary.SecondVersionTotal - mongoSummary.SecondVersionIntentPass
+		mongoSummary.SecondVersionParaminfoAccuracy = float32(mongoSummary.SecondVersionParaminfoPass) / float32(mongoSummary.SecondVersionTotal)
+
+		secondVersionSystemCount, _ := models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": mongoSummary.SecondVersion}, "job_instance_id": mongoSummary.JobInstanceId, "act_source": "system_service"})
+		mongoSummary.SecondVersionRegexCount, _ = models.ReporterDB.MongoCount(SkillResultsTable, bson.M{"case_version": bson.M{"$lte": mongoSummary.SecondVersion}, "job_instance_id": mongoSummary.JobInstanceId, "algo": "regex"})
+		mongoSummary.SecondVersionAlgoCount = secondVersionSystemCount - mongoSummary.SecondVersionRegexCount
+		mongoSummary.SecondVersionRegexPercent = float32(mongoSummary.SecondVersionRegexCount) / float32(secondVersionSystemCount)
+		mongoSummary.SecondVersionAlgoPercent = float32(mongoSummary.SecondVersionAlgoCount) / float32(secondVersionSystemCount)
+
 		summary += fmt.Sprintf("用例版本:%.2f,用例总数:%d,错误数:%d,意图正确率:%f,槽位正确率:%f,意图支撑中算法占比%f,工程模板占比%f\n",
-			SecondVersion,
-			secondVersionTotal,
-			secondVersionTotal-secondVersionIntentPass,
-			float32(secondVersionIntentPass)/float32(secondVersionTotal),
-			float32(secondVersionParamPass)/float32(secondVersionTotal),
-			1-float32(secondVersionRegexCount)/float32(secondVersionSystemCount),
-			float32(secondVersionRegexCount)/float32(secondVersionSystemCount))
+			mongoSummary.SecondVersion,
+			mongoSummary.SecondVersionTotal,
+			mongoSummary.SecondVersionIntentFail,
+			mongoSummary.SecondVersionIntentAccuracy,
+			mongoSummary.SecondVersionParaminfoAccuracy,
+			mongoSummary.SecondVersionAlgoPercent,
+			mongoSummary.SecondVersionRegexPercent)
 	}
 
 	// 附加信息
 	summary += fmt.Sprintf("请求参数:请求地址:%s,AgentId:%d,并发数:%d\n", Skill.SkillConfig.ConnAddr, Skill.SkillConfig.AgentId, Skill.SkillConfig.ChanNum)
 	Skill.Summary = summary
+
+	// 测试总结存储到mongo
+	mongoSummary.OverView = Skill.Summary
+	models.ReporterDB.MongoInsertOne(MongoSummaryTable, mongoSummary)
 }
 
 func (Skill *SkillTask) sendReport() {
@@ -153,3 +238,7 @@ func (Skill *SkillTask) sendReport() {
 		}
 	}
 }
+
+var (
+	MongoSummaryTable = "summary"
+)

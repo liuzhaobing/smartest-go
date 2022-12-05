@@ -6,7 +6,30 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"smartest-go/models"
 	"smartest-go/pkg/logf"
+	"time"
 )
+
+type QASummaryToMongo struct {
+	TaskName             string      `bson:"task_name"`
+	TaskType             string      `bson:"task_type"`
+	JobInstanceId        string      `bson:"job_instance_id"`
+	TaskConfig           string      `bson:"task_config"`
+	MaxCost              interface{} `bson:"max_cost"`
+	MinCost              interface{} `bson:"min_cost"`
+	AvgCost              interface{} `bson:"avg_cost"`
+	OverView             string      `bson:"over_view"`
+	StartTime            time.Time   `bson:"start_time"`
+	EndTime              time.Time   `bson:"end_time"`
+	SmokeTotal           int64       `bson:"smoke_total"`
+	SmokePass            int64       `bson:"smoke_pass"`
+	SmokeFail            int64       `bson:"smoke_fail"`
+	SmokeAccuracy        float32     `bson:"smoke_accuracy"`
+	FirstVersion         float32     `bson:"first_version"`
+	FirstVersionTotal    int64       `bson:"first_version_total"`
+	FirstVersionPass     int64       `bson:"first_version_pass"`
+	FirstVersionFail     int64       `bson:"first_version_fail"`
+	FirstVersionAccuracy float32     `bson:"first_version_accuracy"`
+}
 
 func (QA *QATask) writeQAResultExcel() {
 	//headers := []map[string]string{
@@ -35,8 +58,14 @@ func (QA *QATask) writeQAResultExcel() {
 }
 
 func (QA *QATask) getResultSummary() {
+	mongoSummary := &QASummaryToMongo{StartTime: QA.startTime, EndTime: QA.endTime}
 	// 标题
-	summary := fmt.Sprintf("%s %s\n", QA.QAConfig.TaskName, QA.JobInstanceId)
+	mongoSummary.TaskName = QA.QAConfig.TaskName
+	mongoSummary.JobInstanceId = QA.JobInstanceId
+	tmpC, _ := json.Marshal(QA.QAConfig)
+	mongoSummary.TaskConfig = string(tmpC)
+	mongoSummary.TaskType = CommonQA
+	summary := fmt.Sprintf("%s %s\n", mongoSummary.TaskName, mongoSummary.JobInstanceId)
 
 	// 耗时统计
 	costInfo, _ := models.ReporterDB.MongoAggregate(qaResultsTable, []bson.M{
@@ -47,26 +76,35 @@ func (QA *QATask) getResultSummary() {
 			"min_cost": bson.M{"$min": "$edg_cost"},
 			"avg_cost": bson.M{"$avg": "$edg_cost"},
 		}}})
-	summary += fmt.Sprintf("耗时统计:最大耗时:%d, 最小耗时:%d, 平均耗时:%.2f\n", costInfo[0].Map()["max_cost"], costInfo[0].Map()["min_cost"], costInfo[0].Map()["avg_cost"])
+	mongoSummary.MaxCost = costInfo[0].Map()["max_cost"]
+	mongoSummary.MinCost = costInfo[0].Map()["min_cost"]
+	mongoSummary.AvgCost = costInfo[0].Map()["avg_cost"]
+	summary += fmt.Sprintf("耗时统计:最大耗时:%d, 最小耗时:%d, 平均耗时:%.2f\n", mongoSummary.MaxCost, mongoSummary.MinCost, mongoSummary.AvgCost)
 
 	// 发布必测统计
 	isSmokeTotal, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1})
-	if isSmokeTotal != 0 {
-		smokePass, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1, "is_pass": true})
-		summary += fmt.Sprintf("★★★发布必测用例总数:%d,错误数:%d,正确率:%f\n", isSmokeTotal, isSmokeTotal-smokePass, float32(smokePass)/float32(isSmokeTotal))
+	if isSmokeTotal > 0 {
+		mongoSummary.SmokeTotal = isSmokeTotal
+		mongoSummary.SmokePass, _ = models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1, "is_pass": true})
+		mongoSummary.SmokeFail = mongoSummary.SmokeTotal - mongoSummary.SmokePass
+		mongoSummary.SmokeAccuracy = float32(mongoSummary.SmokePass) / float32(mongoSummary.SmokeTotal)
+		summary += fmt.Sprintf("★★★发布必测用例总数:%d,错误数:%d,正确率:%f\n", mongoSummary.SmokeTotal, mongoSummary.SmokeFail, mongoSummary.SmokeAccuracy)
 	}
 
 	// 最高版本统计
-	firstVersionTotal, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId})
-	firstVersionIntentPass, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_pass": true})
-	summary += fmt.Sprintf("用例总数:%d,错误数:%d,正确率:%f\n",
-		firstVersionTotal,
-		firstVersionTotal-firstVersionIntentPass,
-		float32(firstVersionIntentPass)/float32(firstVersionTotal))
+	mongoSummary.FirstVersionTotal, _ = models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId})
+	mongoSummary.FirstVersionPass, _ = models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_pass": true})
+	mongoSummary.FirstVersionFail = mongoSummary.FirstVersionTotal - mongoSummary.FirstVersionPass
+	mongoSummary.FirstVersionAccuracy = float32(mongoSummary.FirstVersionPass) / float32(mongoSummary.FirstVersionTotal)
+	summary += fmt.Sprintf("用例总数:%d,错误数:%d,正确率:%f\n", mongoSummary.FirstVersionTotal, mongoSummary.FirstVersionFail, mongoSummary.FirstVersionAccuracy)
 
 	// 附加信息
 	summary += fmt.Sprintf("请求参数:请求地址:%s,AgentId:%d,并发数:%d\n", QA.QAConfig.ConnAddr, QA.QAConfig.AgentId, QA.QAConfig.ChanNum)
 	QA.Summary = summary
+
+	// 测试总结存储到mongo
+	mongoSummary.OverView = QA.Summary
+	models.ReporterDB.MongoInsertOne(MongoSummaryTable, mongoSummary)
 }
 
 func (QA *QATask) sendReport() {

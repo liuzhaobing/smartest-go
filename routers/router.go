@@ -17,7 +17,6 @@ import (
 	util "smartest-go/pkg/util/const"
 	"smartest-go/request/api/v1"
 	"smartest-go/task"
-	skillViews "smartest-go/views/skill"
 	"strings"
 	"sync"
 	"time"
@@ -174,56 +173,56 @@ func InitRouter() *gin.Engine {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.ListSkill(context)
+				v1.ListSkill(context)
 			}
 		})
 		apiCasesV1.DELETE("/:type/:id", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.RemoveSkill(context)
+				v1.RemoveSkill(context)
 			}
 		})
 		apiCasesV1.GET("/:type/:id", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.DetailSkill(context)
+				v1.DetailSkill(context)
 			}
 		})
 		apiCasesV1.POST("/:type", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.AddSkill(context)
+				v1.AddSkill(context)
 			}
 		})
 		apiCasesV1.PUT("/:type/:id", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.UpdateSkill(context)
+				v1.UpdateSkill(context)
 			}
 		})
 		apiCasesV1.POST("/:type/import/excel", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.ImportSkill(context)
+				v1.ImportSkill(context)
 			}
 		})
 		apiCasesV1.GET("/:type/count/:column", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.GetSkillCaseCountByColumn(context)
+				v1.GetSkillCaseCountByColumn(context)
 			}
 		})
 		apiCasesV1.GET("/:type/total/weekly", func(context *gin.Context) {
 			TaskType := context.Param("type")
 			switch TaskType {
 			case skill:
-				skillViews.GetSkillCaseCountByWeek(context)
+				v1.GetSkillCaseCountByWeek(context)
 			}
 		})
 	}

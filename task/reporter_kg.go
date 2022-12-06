@@ -74,8 +74,8 @@ func (KG *KGTask) getResultSummary() {
 
 	// 版本统计
 	mongoSummary.FirstVersionTotal, _ = models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId})
-	mongoSummary.FirstVersionFail, _ = models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId, "is_pass": false})
-	mongoSummary.FirstVersionPass = mongoSummary.FirstVersionTotal - mongoSummary.FirstVersionFail
+	mongoSummary.FirstVersionPass, _ = models.ReporterDB.MongoCount(kgResultsTable, bson.M{"job_instance_id": KG.JobInstanceId, "is_pass": true})
+	mongoSummary.FirstVersionFail = mongoSummary.FirstVersionTotal - mongoSummary.FirstVersionPass
 	mongoSummary.FirstVersionAccuracy = float32(mongoSummary.FirstVersionPass) / float32(mongoSummary.FirstVersionTotal)
 	summary += fmt.Sprintf("用例统计:%d, 错误数:%d, 正确率:%f\n", mongoSummary.FirstVersionTotal, mongoSummary.FirstVersionFail, mongoSummary.FirstVersionAccuracy)
 

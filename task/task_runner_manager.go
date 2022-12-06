@@ -91,6 +91,16 @@ func LookUpStatus(context *gin.Context) {
 	}
 	sort.Sort(infoList)
 	if req.PageSize*req.PageNum >= len(infoList) {
+		if req.PageSize*(req.PageNum-1) >= len(infoList) {
+			app.SuccessRespByCode(context, e.SUCCESS, struct {
+				Total int64      `json:"total"`
+				Data  MyTaskList `json:"data"`
+			}{
+				Total: int64(len(infoList)),
+				Data:  nil,
+			})
+			return
+		}
 		app.SuccessRespByCode(context, e.SUCCESS, struct {
 			Total int64      `json:"total"`
 			Data  MyTaskList `json:"data"`

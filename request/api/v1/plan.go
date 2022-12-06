@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"smartest-go/models"
 	"smartest-go/pkg/app"
@@ -14,14 +15,29 @@ import (
 func ListPlan(context *gin.Context) {
 	req := context.MustGet(util.REQUEST_KEY).(*task.ListTask)
 	model := models.NewTaskPlanModel()
-	total, err := model.GetTaskPlanTotal("1=1")
+	var query string
+	if req.TaskType != "" {
+		query += fmt.Sprintf(`task_type = '%s'`, req.TaskType)
+	}
+	if req.TaskGroup != "" {
+		if query != "" {
+			query += " and "
+		}
+		query += fmt.Sprintf(`task_group = '%s'`, req.TaskGroup)
+	}
+	if req.TaskName != "" {
+		if query != "" {
+			query += " and "
+		}
+		query += "task_name like '%" + req.TaskName + "%'"
+	}
+	total, err := model.GetTaskPlanTotal(query)
 	if err != nil {
 		app.ErrorResp(context, e.ERROR, err.Error(), nil)
 		return
 	}
-
 	pageNum := (req.PageNum - 1) * req.PageSize
-	result, err := model.GetTaskPlans(pageNum, req.PageSize, "1=1")
+	result, err := model.GetTaskPlans(pageNum, req.PageSize, query)
 	if err != nil {
 		app.ErrorResp(context, e.ERROR, err.Error(), nil)
 		return

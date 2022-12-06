@@ -28,8 +28,16 @@ type TaskInfo struct {
 	StartTime       string             `json:"start_time" bson:"start_time" form:"start_time,omitempty"`                   // 开始时间
 	EndTime         string             `json:"end_time" bson:"end_time" form:"end_time,omitempty"`                         // 结束时间
 	Cancel          context.CancelFunc `json:"-" bson:"-" form:"-"`
-	PageNum         int                `json:"-" bson:"-" form:"page_num,omitempty,default=1"`
-	PageSize        int                `json:"-" bson:"-" form:"page_size,omitempty,default=30"`
+}
+
+type TaskInfoSearch struct {
+	JobInstanceId string `json:"job_instance_id,omitempty"  form:"job_instance_id,omitempty"` // 测试任务实例
+	Name          string `json:"task_name,omitempty"  form:"task_name,omitempty"`             // 测试任务名称
+	TaskType      string `json:"task_type,omitempty"  form:"task_type,omitempty"`             // 任务类型
+	Status        int    `json:"status,omitempty"  form:"status,omitempty"`
+
+	PageNum  int `json:"page_num,omitempty,default=1"  form:"page_num,omitempty,default=1"`
+	PageSize int `json:"page_size,omitempty,default=30"  form:"page_size,omitempty,default=30"`
 }
 
 type MyTaskList []*TaskInfo
@@ -68,7 +76,7 @@ func Status(context *gin.Context) {
 }
 
 func LookUpStatus(context *gin.Context) {
-	req := context.MustGet(util.REQUEST_KEY).(*TaskInfo)
+	req := context.MustGet(util.REQUEST_KEY).(*TaskInfoSearch)
 	var infoList MyTaskList
 
 	tempMap := make(map[string]*TaskInfo)
@@ -101,7 +109,7 @@ func LookUpStatus(context *gin.Context) {
 	})
 }
 
-func statusFromLocal(req *TaskInfo, tempTaskInfoMap map[string]*TaskInfo) {
+func statusFromLocal(req *TaskInfoSearch, tempTaskInfoMap map[string]*TaskInfo) {
 	for _, value := range taskInfoMap {
 		if req != nil {
 			if ((req.Name != "" && value.Name == req.Name) || req.Name == "") &&
@@ -116,7 +124,7 @@ func statusFromLocal(req *TaskInfo, tempTaskInfoMap map[string]*TaskInfo) {
 	}
 }
 
-func statusFromDB(req *TaskInfo, tempTaskInfoMap map[string]*TaskInfo) {
+func statusFromDB(req *TaskInfoSearch, tempTaskInfoMap map[string]*TaskInfo) {
 	f := bson.M{}
 	if req != nil {
 		if req.Name != "" {

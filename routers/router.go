@@ -107,7 +107,7 @@ func InitRouter() *gin.Engine {
 	apiHistory := apiV1.Group("/history")
 	apiHistory.Use()
 	{
-		apiHistory.GET("", Validation(&task.TaskInfo{}), task.LookUpStatus) // 获取测试执行历史
+		apiHistory.GET("", Validation(&task.TaskInfoSearch{}), task.LookUpStatus) // 获取测试执行历史
 	}
 
 	// 定时任务控制器

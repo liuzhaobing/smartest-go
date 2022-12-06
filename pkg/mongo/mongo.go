@@ -95,7 +95,7 @@ func (m *MongoInfo) MongoPoolDisconnect() {
 	defer cancel()
 	defer func() {
 		if err := m.client.Disconnect(ctx); err != nil {
-			panic(err)
+			//panic(err)
 		}
 	}()
 }

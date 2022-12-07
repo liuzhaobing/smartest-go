@@ -190,11 +190,12 @@ func UpdatePlan(context *gin.Context) {
 	}
 
 	newInfo := &models.TaskPlanBase{
-		TaskName:      req.TaskName,
-		TaskType:      req.TaskType,
-		TaskGroup:     req.TaskGroup,
-		IsCrontab:     req.IsCrontab,
-		CrontabString: req.CrontabString,
+		TaskName:            req.TaskName,
+		TaskType:            req.TaskType,
+		TaskGroup:           req.TaskGroup,
+		IsCrontab:           req.IsCrontab,
+		TaskDataSourceLabel: req.TaskDataSourceLabel,
+		CrontabString:       req.CrontabString,
 	}
 
 	if req.TaskConfig != nil {

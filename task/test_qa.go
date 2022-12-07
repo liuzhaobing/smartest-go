@@ -49,37 +49,39 @@ type QATaskRes struct {
 	TraceId     string // trace
 	GroupId     int64
 	AlgoScore   float64
+	Algo        string
 }
 
 type QATaskOnceResp struct {
 	Req           *QATaskReq // 单次测试请求信息
 	Res           *QATaskRes // 单次测试响应信息
-	IsPass        bool       // 整体是否通过
-	IsTextPass    bool       // 回复tts是否通过
+	IsPass        bool       // 回复tts是否通过 一般用这个结果就行了
 	IsGroupIdPass bool       // 命中的GroupId是否一致
-	IsExactMatch  bool       // 是否完全匹配
+	IsFullPass    bool       // 整体是否通过 即tts和groupId都要同时通过
+	IsExactMatch  bool       // 是否完全匹配 算法会返回类型 类型是exact就true
 	EdgCost       jsonTime
 }
 
 // QAResults 存储qa测试结果的MongoDB表结构
 type QAResults struct {
-	JobInstanceId string `bson:"job_instance_id"`  //
-	Id            int64  `bson:"id"`               // 用例编号
-	Question      string `bson:"question"`         // 测试语句
-	Answer        string `bson:"exp_answer"`       // 期望回复
-	ActAnswer     string `bson:"act_answer"`       // 实际回复
-	IsPass        bool   `bson:"is_pass"`          // 是否通过
-	Source        string `bson:"source"`           // 回复命中类型
-	GroupID       string `bson:"exp_group_id"`     // 期望GroupId
-	ActGroupID    string `bson:"act_group_id"`     // 实际GroupId
-	IsGroupIDPass bool   `bson:"is_group_id_pass"` // GroupId是否匹配
-	IsFullPass    bool   `bson:"is_full_pass"`     // 是否完全匹配
-	AlgoScore     string `bson:"algo_score"`       // 算法得分score
-	EdgCost       int64  `bson:"edg_cost"`         // 端测耗时(ms)
-	ExecuteTime   int64  `bson:"execute_time"`     // 此条用例运行时间点
-	TaskName      string `bson:"task_name"`        // 测试计划名
-	TraceId       string `bson:"trace_id"`         // TraceID
-	IsSmoke       int    `bson:"is_smoke"`         //
+	JobInstanceId string  `bson:"job_instance_id"`  //
+	Id            int64   `bson:"id"`               // 用例编号
+	Question      string  `bson:"question"`         // 测试语句
+	Answer        string  `bson:"exp_answer"`       // 期望回复
+	ActAnswer     string  `bson:"act_answer"`       // 实际回复
+	IsPass        bool    `bson:"is_pass"`          // 是否通过
+	Source        string  `bson:"source"`           // 回复命中类型
+	GroupID       int64   `bson:"exp_group_id"`     // 期望GroupId
+	ActGroupID    int64   `bson:"act_group_id"`     // 实际GroupId
+	IsGroupIDPass bool    `bson:"is_group_id_pass"` // GroupId是否匹配
+	IsFullPass    bool    `bson:"is_full_pass"`     // 是否完全匹配
+	Algo          string  `bson:"algo"`             // 命中算法类型
+	AlgoScore     float64 `bson:"algo_score"`       // 算法得分score
+	EdgCost       int64   `bson:"edg_cost"`         // 端测耗时(ms)
+	ExecuteTime   int64   `bson:"execute_time"`     // 此条用例运行时间点
+	TaskName      string  `bson:"task_name"`        // 测试计划名
+	TraceId       string  `bson:"trace_id"`         // TraceID
+	IsSmoke       int     `bson:"is_smoke"`         //
 }
 
 type QATask struct {
@@ -220,9 +222,15 @@ func (QA *QATask) run() {
 			Answer:        strings.Join(resp.Req.ExpectAnswer, "&&"),
 			ActAnswer:     resp.Res.ActAnswer,
 			IsPass:        resp.IsPass,
+			GroupID:       resp.Req.ExpectGroup,
+			ActGroupID:    resp.Res.GroupId,
+			IsGroupIDPass: resp.IsGroupIdPass,
+			IsFullPass:    resp.IsFullPass,
 			EdgCost:       resp.EdgCost.Milliseconds(),
 			ExecuteTime:   resp.Res.ExecuteTime,
 			TaskName:      QA.QAConfig.TaskName,
+			Algo:          resp.Res.Algo,
+			AlgoScore:     resp.Res.AlgoScore,
 			Source:        resp.Res.Source,
 			TraceId:       resp.Res.TraceId,
 			IsSmoke:       resp.Req.IsSmoke,
@@ -321,7 +329,7 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 	}
 	if len(resp.Tts) == 0 {
 		Res.Res.ActAnswer = ""
-		Res.IsPass = false
+		Res.IsFullPass = false
 		Res.IsGroupIdPass = false
 		return Res
 	}
@@ -341,27 +349,28 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 	for _, expA := range req.ExpectAnswer {
 		// 看看每个期望答案是不是实际答案的子集
 		if strings.Contains(RemoveSpecialSign(Res.Res.ActAnswer), RemoveSpecialSign(expA)) { //2022-10-19 由于Excel导入时特殊字符影响断言 所以先将字符去除后来断言
-			Res.IsTextPass = true
+			Res.IsPass = true
 			break
 		}
 	}
 
 	//是否要通过group_id来判断对错
 	if QA.QAConfig.IsGroupId == "yes" {
-		if Res.IsTextPass && Res.IsGroupIdPass {
-			Res.IsPass = true
+		if Res.IsPass && Res.IsGroupIdPass {
+			Res.IsFullPass = true
 		} else {
-			Res.IsPass = false
+			Res.IsFullPass = false
 		}
 	} else {
-		if Res.IsTextPass {
-			Res.IsPass = true
+		if Res.IsPass {
+			Res.IsFullPass = true
 		} else {
-			Res.IsPass = false
+			Res.IsFullPass = false
 		}
 	}
 
-	if resp.HitLog.Fields["algo"].GetStringValue() == "exact" {
+	Res.Res.Algo = resp.HitLog.Fields["algo"].GetStringValue()
+	if Res.Res.Algo == "exact" {
 		Res.IsExactMatch = true
 	}
 

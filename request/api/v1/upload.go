@@ -15,7 +15,9 @@ type DirPath struct {
 func GetFileList(context *gin.Context) {
 	req := context.MustGet(util.REQUEST_KEY).(*DirPath)
 	files := GetFiles(req.Path)
-	sort.Strings(files)
+	sort.Slice(files, func(i, j int) bool {
+		return files[i] > files[j]
+	})
 
 	app.SuccessResp(context, files)
 }

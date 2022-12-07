@@ -154,10 +154,10 @@ func (Skill *SkillTask) getResultSummary() {
 
 	if len(caseVersionInfo) > 1 {
 		if caseVersionInfo[0].Map()["case_version"] != nil {
-			mongoSummary.FirstVersion, _ = (caseVersionInfo[0].Map()["case_version"]).(float32)
+			mongoSummary.FirstVersion = float32((caseVersionInfo[0].Map()["case_version"]).(float64))
 		}
 		if caseVersionInfo[1].Map()["case_version"] != nil {
-			mongoSummary.SecondVersion, _ = (caseVersionInfo[1].Map()["case_version"]).(float32)
+			mongoSummary.SecondVersion = float32((caseVersionInfo[1].Map()["case_version"]).(float64))
 		}
 	}
 

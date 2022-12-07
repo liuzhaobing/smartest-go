@@ -85,10 +85,10 @@ func (QA *QATask) getResultSummary() {
 	isSmokeTotal, _ := models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1})
 	if isSmokeTotal > 0 {
 		mongoSummary.SmokeTotal = isSmokeTotal
-		mongoSummary.SmokePass, _ = models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1, "is_pass": true})
+		mongoSummary.SmokePass, _ = models.ReporterDB.MongoCount(qaResultsTable, bson.M{"job_instance_id": QA.JobInstanceId, "is_smoke": 1, "algo": "qqsim"})
 		mongoSummary.SmokeFail = mongoSummary.SmokeTotal - mongoSummary.SmokePass
 		mongoSummary.SmokeAccuracy = float32(mongoSummary.SmokePass) / float32(mongoSummary.SmokeTotal)
-		summary += fmt.Sprintf("★★★发布必测用例总数:%d,错误数:%d,正确率:%f\n", mongoSummary.SmokeTotal, mongoSummary.SmokeFail, mongoSummary.SmokeAccuracy)
+		summary += fmt.Sprintf("★★★qqsim算法检测总数:%d,未匹配数:%d,匹配率:%f\n", mongoSummary.SmokeTotal, mongoSummary.SmokeFail, mongoSummary.SmokeAccuracy)
 	}
 
 	// 最高版本统计

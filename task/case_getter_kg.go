@@ -42,8 +42,8 @@ func (KG *KGTask) CaseGetterKG(c context.Context) {
 func (KG *KGTask) fakeQuerySingleStepRandomly(ctx context.Context) {
 	// 抽取关系 从关系表中 随机抽取n条关系
 	caseListRl, _ := KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum}},
-		{"$match": bson.M{"status": bson.M{"$lt": 2}, "is_del": false}}})
+		{"$match": bson.M{"status": bson.M{"$lt": 2}, "is_del": false}},
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(ctx context.Context) {
@@ -75,6 +75,8 @@ func (KG *KGTask) fakeQuerySingleStepRandomly(ctx context.Context) {
 	default:
 		if len(KG.req) < int(KG.KGDataSourceConfig.CaseNum) {
 			KG.fakeQuerySingleStepRandomly(ctx)
+		} else {
+			KG.req = KG.req[:KG.KGDataSourceConfig.CaseNum]
 		}
 	}
 }
@@ -151,9 +153,11 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum}},
-		{"$match": bson.M{"name": Relation1}}})
-
+		{"$match": bson.M{"name": Relation1}},
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
+	if Relation1IDs == nil {
+		return
+	}
 	// 遍历关系1的ids
 	for _, Relation1ID := range Relation1IDs {
 
@@ -161,21 +165,45 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 		triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false})
 		for _, triplet := range triplets {
 			var wg sync.WaitGroup
-			var Triplets2, EntityA []*bson.D
+			var Triplets2, EntityA, EntityB, EntityC []*bson.D // 三个实体对应的mongo数据信息
+			var A, B, C string                                 // 三个实体的中文名
+			var EntityAid, EntityBid, EntityCid interface{}    // 三个实体的id
+
+			EntityAid = triplet.Map()["e_id"]
+			EntityBid = triplet.Map()["e_id2"]
 			wg.Add(1)
 			go func() {
-				Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": triplet.Map()["e_id2"], "status": bson.M{"$lt": 2}, "is_del": false})
+				Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false})
 				wg.Done()
 			}()
 			wg.Add(1)
 			go func() {
-				EntityA, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": triplet.Map()["e_id"], "need_audit": false}, options.Find().SetLimit(1))
+				EntityA, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": EntityAid, "need_audit": false}, options.Find().SetLimit(1))
+				wg.Done()
+			}()
+			wg.Add(1)
+			go func() {
+				EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": EntityBid, "need_audit": false}, options.Find().SetLimit(1))
 				wg.Done()
 			}()
 			wg.Wait()
+
+			// 异常捕获
+			if EntityA == nil || EntityB == nil {
+				continue
+			}
+			A = mongo.GetInterfaceToString(EntityA[0].Map()["name"])
+			B = mongo.GetInterfaceToString(EntityB[0].Map()["name"])
+
+			// 查到mongo数据后 看是否需要去nebula数据校对
+			if result1 := KG.verifyNebula(EntityAid, Relation1, B, KG.KGDataSourceConfig.VerifyAddr); !result1 {
+				continue
+			}
+
 			//	根据eid2 找第二个三元组关系
 			for _, x := range Triplets2 {
-				var kk, EntityB, EntityC []*bson.D
+				EntityCid = x.Map()["e_id2"]
+				var kk []*bson.D
 				wg.Add(1)
 				go func() {
 					kk, _ = KG.KGCaseGetterMongo.MongoFind(ontologyRLTable, bson.M{"_id": x.Map()["ot_rl_id"]})
@@ -183,32 +211,44 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 				}()
 				wg.Add(1)
 				go func() {
-					EntityB, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": x.Map()["e_id"], "need_audit": false}, options.Find().SetLimit(1))
-					wg.Done()
-				}()
-				wg.Add(1)
-				go func() {
-					EntityC, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": x.Map()["e_id2"], "need_audit": false}, options.Find().SetLimit(1))
+					EntityC, _ = KG.KGCaseGetterMongo.MongoFind(entityTable, bson.M{"_id": EntityCid, "need_audit": false}, options.Find().SetLimit(1))
 					wg.Done()
 				}()
 				wg.Wait()
-				if kk != nil && EntityC != nil && EntityA != nil {
-					if kk[0].Map()["name"] == Relation2 {
-						A := mongo.GetInterfaceToString(EntityA[0].Map()["name"])
-						B := mongo.GetInterfaceToString(EntityB[0].Map()["name"])
-						C := mongo.GetInterfaceToString(EntityC[0].Map()["name"])
-						for _, tmp3 := range tmp2.Model {
-							Req = append(Req, &KGTaskReq{
-								Query:        replaceSlot(tmp3.Query, A, B, C),
-								ExpectAnswer: replaceSlot(tmp3.ExpectAnswer, A, B, C),
-							})
-						}
-					}
+
+				if EntityC == nil {
+					continue
+				}
+				C = mongo.GetInterfaceToString(EntityC[0].Map()["name"])
+
+				if result2 := KG.verifyNebula(EntityBid, Relation2, C, KG.KGDataSourceConfig.VerifyAddr); !result2 {
+					continue
+				}
+				if kk == nil {
+					continue
+				}
+				if kk[0].Map()["name"] != Relation2 {
+					continue
+				}
+				for _, tmp3 := range tmp2.Model {
+					Req = append(Req, &KGTaskReq{
+						Query:        replaceSlot(tmp3.Query, A, B, C),
+						ExpectAnswer: replaceSlot(tmp3.ExpectAnswer, A, B, C),
+					})
 				}
 			}
 		}
 	}
 	return
+}
+
+func (KG *KGTask) verifyNebula(entityId interface{}, relation, expectAnswer, env string) bool {
+	// 判断用例数据是否需要在nebula中校验有效性
+	if KG.KGDataSourceConfig.IsVerify == "yes" && KG.KGDataSourceConfig.VerifyAddr != "" {
+		// TODO
+		return true
+	}
+	return true
 }
 
 func (KG *KGTask) mockQueryOneStepByTemplate() (Req []*KGTaskReq) {
@@ -221,8 +261,8 @@ func (KG *KGTask) mockQueryOneStepByTemplate() (Req []*KGTaskReq) {
 
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum}},
-		{"$match": bson.M{"name": Relation1}}})
+		{"$match": bson.M{"name": Relation1}},
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
 
 	// 遍历关系1的ids
 	for _, Relation1ID := range Relation1IDs {
@@ -290,6 +330,8 @@ func (KG *KGTask) mockQueryTwoStep(ctx context.Context) {
 	default:
 		if len(KG.req) < int(KG.KGDataSourceConfig.CaseNum) {
 			KG.mockQueryTwoStep(ctx)
+		} else {
+			KG.req = KG.req[:KG.KGDataSourceConfig.CaseNum]
 		}
 	}
 }
@@ -326,6 +368,8 @@ func (KG *KGTask) mockQueryOneStep(ctx context.Context) {
 	default:
 		if len(KG.req) < int(KG.KGDataSourceConfig.CaseNum) {
 			KG.mockQueryOneStep(ctx)
+		} else {
+			KG.req = KG.req[:KG.KGDataSourceConfig.CaseNum]
 		}
 	}
 }

@@ -79,6 +79,8 @@ type KGDataSource struct {
 	CType        int64            `json:"c_type,omitempty" form:"c_type,omitempty"`               // 1单跳 2两跳
 	IsContinue   string           `json:"is_continue,omitempty" form:"is_continue,omitempty"`     // 是否持续测试
 	IsRandom     string           `json:"is_random,omitempty" form:"is_random,omitempty"`         // 是否随机测试
+	IsVerify     string           `json:"is_verify" form:"is_verify"`                             // 是否校验用例数据
+	VerifyAddr   string           `json:"verify_addr" form:"verify_addr"`                         // 校验地址
 	KGDataBase   *mongo.MongoInfo `json:"kg_data_base,omitempty" form:"kg_data_base,omitempty"`   // 用例构造使用的数据源
 	TemplateJson []*KGTemplate    `json:"template_json,omitempty" form:"template_json,omitempty"` // 用例构造使用的模板
 }

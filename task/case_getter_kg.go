@@ -46,8 +46,8 @@ func (KG *KGTask) CaseGetterKG(c context.Context) {
 func (KG *KGTask) fakeQuerySingleStepRandomly(ctx context.Context) {
 	// 抽取关系 从关系表中 随机抽取n条关系
 	caseListRl, _ := KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
-		{"$match": bson.M{"status": bson.M{"$lt": 2}, "is_del": false}},
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 10}},
+		{"$match": bson.M{"status": bson.M{"$lt": 2}, "is_del": false}}})
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func(ctx context.Context) {

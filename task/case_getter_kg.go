@@ -158,7 +158,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
 		{"$match": bson.M{"name": Relation1}},
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum % 31}}})
+		{"$sample": bson.M{"size": 10}}})
 	if Relation1IDs == nil {
 		return
 	}
@@ -166,7 +166,10 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	for _, Relation1ID := range Relation1IDs {
 
 		// 根据关系1的id查询三元组triplets(e_id, e_id2, ot_rl_id)
-		triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false})
+		triplets, _ := KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
+			{"$match": bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false}},
+			{"$sample": bson.M{"size": 10}}})
+		//triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false})
 		for _, triplet := range triplets {
 			var wg sync.WaitGroup
 			var Triplets2, EntityA, EntityB, EntityC []*bson.D // 三个实体对应的mongo数据信息
@@ -179,7 +182,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 			go func() {
 				Triplets2, _ = KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
 					{"$match": bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false}},
-					{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum % 31}}})
+					{"$sample": bson.M{"size": 10}}})
 				//Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false})
 				wg.Done()
 			}()

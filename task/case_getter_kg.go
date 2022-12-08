@@ -107,8 +107,13 @@ func (KG *KGTask) fakeQuerySingleStep(entityRl *bson.D) (Req *KGTaskReq) {
 	wg.Wait()
 
 	if infoEID1 != nil && infoOTRLID != nil && infoEID2 != nil {
+		query := mongo.GetInterfaceToString(infoEID1[0].Map()["name"]) + "的" + mongo.GetInterfaceToString(infoOTRLID[0].Map()["name"])
+		if strings.Contains(KG.QueryQ, query) {
+			return
+		}
+		KG.QueryQ += query
 		Req = &KGTaskReq{
-			Query:        mongo.GetInterfaceToString(infoEID1[0].Map()["name"]) + "的" + mongo.GetInterfaceToString(infoOTRLID[0].Map()["name"]),
+			Query:        query,
 			ExpectAnswer: mongo.GetInterfaceToString(infoEID2[0].Map()["name"]),
 		}
 	}
@@ -163,7 +168,6 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 		return
 	}
 
-	haveQ := "" // 统计本次已经收集的query 用于去重
 	// 遍历关系1的ids
 	for _, Relation1ID := range Relation1IDs {
 
@@ -262,10 +266,10 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 				}
 				for _, tmp3 := range tmp2.Model {
 					q := replaceSlot(tmp3.Query, A, B, C)
-					if strings.Contains(haveQ, q) {
+					if strings.Contains(KG.QueryQ, q) {
 						continue
 					}
-					haveQ += q
+					KG.QueryQ += q
 					Req = append(Req, &KGTaskReq{
 						Query:        q,
 						ExpectAnswer: replaceSlot(tmp3.ExpectAnswer, A, B, C),
@@ -335,7 +339,8 @@ func (KG *KGTask) mockQueryOneStepByTemplate() (Req []*KGTaskReq) {
 	for _, Relation1ID := range Relation1IDs {
 
 		// 根据关系1的id查询三元组triplets(e_id, e_id2, ot_rl_id)
-		triplets, _ := KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false})
+		triplets, _ := KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{{"$match": bson.M{"ot_rl_id": Relation1ID.Map()["_id"], "status": bson.M{"$lt": 2}, "is_del": false}},
+			{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
 		for _, triplet := range triplets {
 			var wg sync.WaitGroup
 			var EntityB, EntityA []*bson.D
@@ -354,8 +359,13 @@ func (KG *KGTask) mockQueryOneStepByTemplate() (Req []*KGTaskReq) {
 				A := mongo.GetInterfaceToString(EntityA[0].Map()["name"])
 				B := mongo.GetInterfaceToString(EntityB[0].Map()["name"])
 				for _, tmp2 := range tmp1.Model {
+					q := replaceSlot(tmp2.Query, A, B, "")
+					if strings.Contains(KG.QueryQ, q) {
+						return
+					}
+					KG.QueryQ += q
 					Req = append(Req, &KGTaskReq{
-						Query:        replaceSlot(tmp2.Query, A, B, ""),
+						Query:        q,
 						ExpectAnswer: replaceSlot(tmp2.ExpectAnswer, A, B, ""),
 					})
 				}

@@ -129,7 +129,8 @@ type KGTask struct {
 	chanNum            int                  // 实际并发数
 	req                []*KGTaskReq         // 用例集
 	Results            []*KGTaskRes         // 结果集
-	RespChan           chan *KGTaskOnceResp //结果管道
+	RespChan           chan *KGTaskOnceResp // 结果管道
+	QueryQ             string               // 用例去重
 	RightCount         int
 	WrongCount         int
 	JobInstanceId      string
@@ -156,6 +157,7 @@ func NewKGTask(kg *KGTaskConfig, req []*KGTaskReq, kgDataSourceConfig *KGDataSou
 }
 
 func (KG *KGTask) pre() {
+	KG.QueryQ = ""
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	success, value := PrepareMissionFlag(KG.KGConfig.TaskName, cancel)

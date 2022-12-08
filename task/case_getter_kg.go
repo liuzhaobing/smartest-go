@@ -1,12 +1,16 @@
 package task
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/360EntSecGroup-Skylar/excelize"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"smartest-go/pkg/mongo"
 	"strconv"
 	"strings"
@@ -154,7 +158,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
 		{"$match": bson.M{"name": Relation1}},
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 5}}})
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 10}}})
 	if Relation1IDs == nil {
 		return
 	}
@@ -166,14 +170,17 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 		for _, triplet := range triplets {
 			var wg sync.WaitGroup
 			var Triplets2, EntityA, EntityB, EntityC []*bson.D // 三个实体对应的mongo数据信息
-			var A, B, C string                                 // 三个实体的中文名
-			var EntityAid, EntityBid, EntityCid interface{}    // 三个实体的id
+			var A, B string                                    // 三个实体的中文名
+			var EntityAid, EntityBid interface{}               // 三个实体的id
 
 			EntityAid = triplet.Map()["e_id"]
 			EntityBid = triplet.Map()["e_id2"]
 			wg.Add(1)
 			go func() {
-				Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false})
+				Triplets2, _ = KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
+					{"$match": bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false}},
+					{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 10}}})
+				//Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false})
 				wg.Done()
 			}()
 			wg.Add(1)
@@ -195,6 +202,14 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 			A = mongo.GetInterfaceToString(EntityA[0].Map()["name"])
 			B = mongo.GetInterfaceToString(EntityB[0].Map()["name"])
 
+			//fmt.Println("实体A：", A)
+			//fmt.Println("实体Aid：", EntityAid)
+
+			//fmt.Println("关系1：", Relation1)
+			//fmt.Println("关系1id：", triplet.Map()["ot_rl_id"])
+
+			//fmt.Println("实体B：", B)
+			//fmt.Println("实体Bid：", EntityBid)
 			// 查到mongo数据后 看是否需要去nebula数据校对
 			if result1 := KG.verifyNebula(EntityAid, Relation1, B, KG.KGDataSourceConfig.VerifyAddr); !result1 {
 				continue
@@ -202,6 +217,8 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 
 			//	根据eid2 找第二个三元组关系
 			for _, x := range Triplets2 {
+				var EntityCid interface{}
+				var C string
 				EntityCid = x.Map()["e_id2"]
 				var kk []*bson.D
 				wg.Add(1)
@@ -216,18 +233,26 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 				}()
 				wg.Wait()
 
+				if kk == nil {
+					continue
+				}
+				if kk[0].Map()["name"] != Relation2 {
+					continue
+				}
 				if EntityC == nil {
 					continue
 				}
 				C = mongo.GetInterfaceToString(EntityC[0].Map()["name"])
 
+				//fmt.Println("实体B：", B)
+				//fmt.Println("实体Bid：", EntityBid)
+
+				//fmt.Println("关系2：", Relation2)
+				//fmt.Println("关系2id：", x.Map()["ot_rl_id"])
+
+				//fmt.Println("实体C：", C)
+				//fmt.Println("实体Cid：", EntityCid)
 				if result2 := KG.verifyNebula(EntityBid, Relation2, C, KG.KGDataSourceConfig.VerifyAddr); !result2 {
-					continue
-				}
-				if kk == nil {
-					continue
-				}
-				if kk[0].Map()["name"] != Relation2 {
 					continue
 				}
 				for _, tmp3 := range tmp2.Model {
@@ -242,11 +267,43 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	return
 }
 
+type Path struct {
+	SrcId   interface{} `json:"src_id"`
+	RelName string      `json:"rel_name"`
+}
+
+type NebulaRequestPayload struct {
+	Env   string `json:"env"`
+	Space string `json:"space"`
+	Paths []Path `json:"paths"`
+}
+
 func (KG *KGTask) verifyNebula(entityId interface{}, relation, expectAnswer, env string) bool {
 	// 判断用例数据是否需要在nebula中校验有效性
 	if KG.KGDataSourceConfig.IsVerify == "yes" && KG.KGDataSourceConfig.VerifyAddr != "" {
-		// TODO
-		return true
+		url := "http://172.16.13.161:8765/graph/path/query"
+		payload := &NebulaRequestPayload{
+			Env:   env,
+			Space: KG.KGDataSourceConfig.KGDataBase.DB,
+			Paths: []Path{
+				{
+					SrcId:   entityId,
+					RelName: relation,
+				},
+			},
+		}
+		p, _ := json.Marshal(payload)
+		req, _ := http.NewRequest("POST", url, bytes.NewReader(p))
+		req.Header.Add("Content-Type", "application/json")
+		res, _ := http.DefaultClient.Do(req)
+		defer res.Body.Close()
+		body, _ := ioutil.ReadAll(res.Body)
+
+		//fmt.Println(string(body))
+		if strings.Contains(string(body), expectAnswer) {
+			return true
+		}
+		return false
 	}
 	return true
 }

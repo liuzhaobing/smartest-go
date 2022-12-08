@@ -158,7 +158,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	// 根据关系1的中文名查本体与本体之间的关系列表ids
 	Relation1IDs, _ := KG.KGCaseGetterMongo.MongoAggregate(ontologyRLTable, []bson.M{
 		{"$match": bson.M{"name": Relation1}},
-		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 10}}})
+		{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum % 31}}})
 	if Relation1IDs == nil {
 		return
 	}
@@ -179,7 +179,7 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 			go func() {
 				Triplets2, _ = KG.KGCaseGetterMongo.MongoAggregate(entityRLTable, []bson.M{
 					{"$match": bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false}},
-					{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum / 10}}})
+					{"$sample": bson.M{"size": KG.KGDataSourceConfig.CaseNum % 31}}})
 				//Triplets2, _ = KG.KGCaseGetterMongo.MongoFind(entityRLTable, bson.M{"e_id": EntityBid, "status": bson.M{"$lt": 2}, "is_del": false})
 				wg.Done()
 			}()

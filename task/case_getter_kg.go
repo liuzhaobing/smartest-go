@@ -162,6 +162,8 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 	if Relation1IDs == nil {
 		return
 	}
+
+	haveQ := "" // 统计本次已经收集的query 用于去重
 	// 遍历关系1的ids
 	for _, Relation1ID := range Relation1IDs {
 
@@ -259,8 +261,13 @@ func (KG *KGTask) mockQueryTwoStepByTemplate() (Req []*KGTaskReq) {
 					continue
 				}
 				for _, tmp3 := range tmp2.Model {
+					q := replaceSlot(tmp3.Query, A, B, C)
+					if strings.Contains(haveQ, q) {
+						continue
+					}
+					haveQ += q
 					Req = append(Req, &KGTaskReq{
-						Query:        replaceSlot(tmp3.Query, A, B, C),
+						Query:        q,
 						ExpectAnswer: replaceSlot(tmp3.ExpectAnswer, A, B, C),
 					})
 				}

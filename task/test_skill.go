@@ -47,6 +47,7 @@ type SkillTaskReq struct { // 从用例中抽取的数据
 	SkillCn         string  `json:"skill_cn,omitempty" form:"skill_cn,omitempty"`
 	RobotType       string  `json:"robot_type,omitempty" form:"robot_type,omitempty"`
 	RobotID         string  `json:"robot_id,omitempty" form:"robot_id,omitempty"`
+	ExpectParams    string  `json:"params,omitempty" form:"params,omitempty"` // 检测sv传给端测的参数
 	ExpectParamInfo string  `json:"paraminfo,omitempty" form:"paraminfo,omitempty"`
 	UseTest         int     `json:"usetest,omitempty" form:"usetest,omitempty"`
 	IsSmoke         int     `json:"is_smoke,omitempty" form:"is_smoke,omitempty"`
@@ -102,6 +103,7 @@ type SkillResults struct {
 	IsPass          bool    `json:"is_pass,omitempty"      bson:"is_pass,omitempty"`
 	ActIntentTTS    string  `json:"act_intent_tts,omitempty"      bson:"act_intent_tts,omitempty"`
 	IsSmoke         int     `json:"is_smoke,omitempty"      bson:"is_smoke,omitempty"`
+	ExpectParams    string  `json:"expect_params,omitempty"      bson:"expect_params,omitempty"`
 	Parameters      string  `json:"parameters,omitempty"      bson:"parameters,omitempty"`
 	Cost            int64   `json:"edg_cost,omitempty"      bson:"edg_cost,omitempty"`
 	ParamInfo       string  `json:"paraminfo,omitempty"      bson:"paraminfo,omitempty"`
@@ -273,6 +275,8 @@ func (Skill *SkillTask) run() {
 			ActIntentTTS:    resp.Res.ActIntentTTS,
 			IsSmoke:         resp.Req.IsSmoke,
 			Cost:            resp.EdgCost.Milliseconds(),
+			ExpectParams:    resp.Req.ExpectParams,
+			Parameters:      resp.Res.ActParam,
 			ParamInfo:       resp.Req.ExpectParamInfo,
 			ActParamInfo:    resp.Res.ActParamInfo,
 			ParamInfoIsPass: resp.IsParamInfoPass,
@@ -385,11 +389,12 @@ func (Skill *SkillTask) call(conn *grpc.ClientConn, req *SkillTaskReq) *SkillTas
 	Skill.getSkillResponseData(resp, Res.Res) // 从响应体收集信息
 	Skill.assertSkillIntent(Res)              // 断言意图
 	Skill.assertSkillParamInfo(Res)           // 断言槽位
-	if !Res.IsParamInfoPass {
+	if !Res.IsParamInfoPass && Res.FailReason == "" {
 		Res.FailReason = "槽位命中错误"
 	}
-	Skill.debugModelCheck(Res) // Debug模式检测算法命中
-	Skill.tagToDeveloper(Res)  // BUG分配
+	Skill.assertSkillParams(Res) // 动作类传递给端侧数据校验
+	Skill.debugModelCheck(Res)   // Debug模式检测算法命中
+	Skill.tagToDeveloper(Res)    // BUG分配
 
 	if Res.IsIntentPass {
 		Skill.RightCount++
@@ -446,6 +451,10 @@ func (Skill *SkillTask) getSkillResponseData(resp *talk.TalkResponse, Res *Skill
 		if tt.Action.Param.VideoUrl != "" {
 			Res.VideoUrl = tt.Action.Param.VideoUrl
 		}
+		if tt.Action.Param.Params != nil {
+			p, _ := json.Marshal(tt.Action.Param.Params)
+			Res.ActParam = string(p)
+		}
 	}
 	if resp.HitLog.Fields["qaresult"] != nil {
 		qaResult := resp.HitLog.Fields["qaresult"].GetStructValue().Fields
@@ -500,6 +509,38 @@ func (Skill *SkillTask) assertSkillIntent(Res *SkillTaskOnceResp) {
 	}
 }
 
+func (Skill *SkillTask) assertSkillParams(Res *SkillTaskOnceResp) {
+	// 断言舞蹈类 透传给端侧的参数是否正确
+	if Res.Req.ExpectIntent != "cm_dance" && Res.Req.ExpectIntent != "can_dance" {
+		return
+	}
+	if Res.Res.ActParam == "" || Res.Req.ExpectParams == "" {
+		Res.IsParamInfoPass = false
+		return
+	}
+	var expP, actP map[string]string
+	err := json.Unmarshal([]byte(Res.Res.ActParam), &actP)
+	if err != nil {
+		Res.IsParamInfoPass = false
+		return
+	}
+	err = json.Unmarshal([]byte(Res.Req.ExpectParams), &expP)
+	if err != nil {
+		Res.IsParamInfoPass = false
+		return
+	}
+
+	// 判断期望值是否都命中
+	for k, v := range expP {
+		if !strings.Contains(Res.Res.ActParam, k) || !strings.Contains(Res.Res.ActParam, v) {
+			Res.IsParamInfoPass = false
+			return
+		}
+	}
+	Res.IsParamInfoPass = true
+	return
+}
+
 func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
 	if Res.Req.ExpectParamInfo == "" && Res.Res.ActParamInfo == "" {
 		Res.IsParamInfoPass = true // 期望槽位与实际槽位同时为空
@@ -525,10 +566,6 @@ func (Skill *SkillTask) assertSkillParamInfo(Res *SkillTaskOnceResp) {
 
 	// around 技能特殊处理
 	if Res.Req.ExpectDomain == "around" {
-		if len(expParam) != len(actParam) {
-			Res.IsParamInfoPass = false // 期望槽位与实际槽位的数量不一致
-			return
-		}
 		for _, act := range actParam {
 			if act.Value == "" {
 				Res.IsParamInfoPass = false // 实际槽位后值为空

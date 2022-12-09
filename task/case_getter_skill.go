@@ -40,6 +40,7 @@ func (Skill *SkillTask) CaseGetterSkill(c context.Context) {
 			SkillCn:         SkillBaseTest.SkillCn,
 			RobotType:       SkillBaseTest.RobotType,
 			RobotID:         SkillBaseTest.RobotId,
+			ExpectParams:    SkillBaseTest.Params,
 			ExpectParamInfo: SkillBaseTest.ParamInfo,
 			UseTest:         SkillBaseTest.UseTest,
 			IsSmoke:         SkillBaseTest.IsSmoke,

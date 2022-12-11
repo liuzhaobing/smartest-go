@@ -20,6 +20,7 @@ type KGSummaryToMongo struct {
 	OverView             string      `bson:"over_view"`
 	StartTime            time.Time   `bson:"start_time"`
 	EndTime              time.Time   `bson:"end_time"`
+	ExecuteDate          string      `bson:"execute_date"`
 	FirstVersion         float32     `bson:"first_version"`
 	FirstVersionTotal    int64       `bson:"first_version_total"`
 	FirstVersionPass     int64       `bson:"first_version_pass"`
@@ -49,7 +50,8 @@ func (KG *KGTask) writeKGResultExcel() {
 }
 
 func (KG *KGTask) getResultSummary() {
-	mongoSummary := &KGSummaryToMongo{StartTime: KG.startTime, EndTime: KG.endTime}
+	nowDate := time.Now().Format("2006-01-02")
+	mongoSummary := &KGSummaryToMongo{StartTime: KG.startTime, EndTime: KG.endTime, ExecuteDate: nowDate}
 	// 标题
 	mongoSummary.TaskName = KG.KGConfig.TaskName
 	mongoSummary.JobInstanceId = KG.JobInstanceId

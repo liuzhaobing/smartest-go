@@ -20,6 +20,7 @@ type SkillSummaryToMongo struct {
 	OverView                       string      `bson:"over_view"`
 	StartTime                      time.Time   `bson:"start_time"`
 	EndTime                        time.Time   `bson:"end_time"`
+	ExecuteDate                    string      `bson:"execute_date"`
 	SmokeTotal                     int64       `bson:"smoke_total"`
 	SmokeIntentPass                int64       `bson:"smoke_intent_pass"`
 	SmokeIntentFail                int64       `bson:"smoke_intent_fail"`
@@ -100,7 +101,8 @@ func (Skill *SkillTask) writeSkillResultExcel() {
 }
 
 func (Skill *SkillTask) getResultSummary() {
-	mongoSummary := &SkillSummaryToMongo{StartTime: Skill.startTime, EndTime: Skill.endTime}
+	nowDate := time.Now().Format("2006-01-02")
+	mongoSummary := &SkillSummaryToMongo{StartTime: Skill.startTime, EndTime: Skill.endTime, ExecuteDate: nowDate}
 	// 标题
 	mongoSummary.TaskName = Skill.SkillConfig.TaskName
 	mongoSummary.JobInstanceId = Skill.JobInstanceId

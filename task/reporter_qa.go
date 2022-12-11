@@ -20,6 +20,7 @@ type QASummaryToMongo struct {
 	OverView             string      `bson:"over_view"`
 	StartTime            time.Time   `bson:"start_time"`
 	EndTime              time.Time   `bson:"end_time"`
+	ExecuteDate          string      `bson:"execute_date"`
 	SmokeTotal           int64       `bson:"smoke_total"`
 	SmokePass            int64       `bson:"smoke_pass"`
 	SmokeFail            int64       `bson:"smoke_fail"`
@@ -58,7 +59,8 @@ func (QA *QATask) writeQAResultExcel() {
 }
 
 func (QA *QATask) getResultSummary() {
-	mongoSummary := &QASummaryToMongo{StartTime: QA.startTime, EndTime: QA.endTime}
+	nowDate := time.Now().Format("2006-01-02")
+	mongoSummary := &QASummaryToMongo{StartTime: QA.startTime, EndTime: QA.endTime, ExecuteDate: nowDate}
 	// 标题
 	mongoSummary.TaskName = QA.QAConfig.TaskName
 	mongoSummary.JobInstanceId = QA.JobInstanceId

@@ -662,7 +662,7 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 
 	Res.BugStatus = "New"
 
-	if Res.Res.Algo == "regex" || Res.Req.RobotID != "" {
+	if Res.Res.Algo == "regex" || Res.Req.RobotID != "" || Res.Req.ExpectIntent == "QueryBattery" {
 		Res.Developer = YoungZhao // 排查模板匹配和多轮问题
 		return
 	}
@@ -682,6 +682,8 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 				gjson.Get(Res.Res.NLUDebugInfo, "intentname").String() == Res.Req.ExpectIntent {
 				Res.Developer = ""
 				Res.FailReason = ""
+				Res.IsIntentPass = true
+				Res.IsParamInfoPass = true
 				Res.BugStatus = "TimeOut导致Domain未命中"
 				return
 			}

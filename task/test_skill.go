@@ -670,17 +670,15 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 		Res.Developer = AaronYang // 排查机型问题
 		return
 	}
-	if Res.Req.ExpectDomain == "compute" ||
-		Res.Req.ExpectDomain == "system_dialet" {
-		Res.Developer = KevinRen // 排查compute、system_dialet问题
-		return
-	}
+	//if Res.Req.ExpectDomain == "compute" ||
+	//	Res.Req.ExpectDomain == "system_dialet" {
+	//	Res.Developer = KevinRen // 排查compute、system_dialet问题
+	//	return
+	//}
 	if Res.FailReason == "domain未命中" &&
 		Res.Res.NLUDebugInfo != "" {
 		if Res.EdgCost.Milliseconds() > 600 {
-			Res.FailReason = "TimeOut导致Domain未命中"
-			Res.Developer = SevelLiu
-			return
+			Res.BugStatus = "TimeOut导致Domain未命中"
 		}
 
 		if gjson.Get(Res.Res.NLUDebugInfo, "domainname").String() == "other" {
@@ -694,7 +692,11 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 			} else {
 				Res.FailReason = "槽位未识别导致intent模型未识别导致domain未识别"
 			}
-			Res.Developer = MikeLuo
+			if Res.Req.ExpectDomain == "music" {
+				Res.Developer = JacksonZhang
+			} else {
+				Res.Developer = MikeLuo
+			}
 			return
 		}
 	}
@@ -711,6 +713,7 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 				return
 			}
 			Res.FailReason = "intent槽位未命中"
+			Res.Developer = JacksonZhang
 			if strings.Contains("weather_new stock compute dance_action joke system", Res.Req.ExpectDomain) {
 				Res.FailReason = "实体树问题"
 				Res.Developer = KevinRen

@@ -678,7 +678,13 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 	if Res.FailReason == "domain未命中" &&
 		Res.Res.NLUDebugInfo != "" {
 		if Res.EdgCost.Milliseconds() > 600 {
-			Res.BugStatus = "TimeOut导致Domain未命中"
+			if gjson.Get(Res.Res.NLUDebugInfo, "domainname").String() == Res.Req.ExpectDomain &&
+				gjson.Get(Res.Res.NLUDebugInfo, "intentname").String() == Res.Req.ExpectIntent {
+				Res.Developer = ""
+				Res.FailReason = ""
+				Res.BugStatus = "TimeOut导致Domain未命中"
+				return
+			}
 		}
 
 		if gjson.Get(Res.Res.NLUDebugInfo, "domainname").String() == "other" {

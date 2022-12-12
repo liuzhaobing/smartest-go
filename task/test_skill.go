@@ -389,12 +389,12 @@ func (Skill *SkillTask) call(conn *grpc.ClientConn, req *SkillTaskReq) *SkillTas
 	Skill.getSkillResponseData(resp, Res.Res) // 从响应体收集信息
 	Skill.assertSkillIntent(Res)              // 断言意图
 	Skill.assertSkillParamInfo(Res)           // 断言槽位
+	Skill.assertSkillParams(Res)              // 动作类传递给端侧数据校验
 	if !Res.IsParamInfoPass && Res.FailReason == "" {
 		Res.FailReason = "槽位命中错误"
 	}
-	Skill.assertSkillParams(Res) // 动作类传递给端侧数据校验
-	Skill.debugModelCheck(Res)   // Debug模式检测算法命中
-	Skill.tagToDeveloper(Res)    // BUG分配
+	Skill.debugModelCheck(Res) // Debug模式检测算法命中
+	Skill.tagToDeveloper(Res)  // BUG分配
 
 	if Res.IsIntentPass {
 		Skill.RightCount++
@@ -512,6 +512,10 @@ func (Skill *SkillTask) assertSkillIntent(Res *SkillTaskOnceResp) {
 func (Skill *SkillTask) assertSkillParams(Res *SkillTaskOnceResp) {
 	// 断言舞蹈类 透传给端侧的参数是否正确
 	if Res.Req.ExpectIntent != "cm_dance" && Res.Req.ExpectIntent != "can_dance" {
+		return
+	}
+	if Res.Res.ActParam == "" && Res.Req.ExpectParams == "" {
+		Res.IsParamInfoPass = true
 		return
 	}
 	if Res.Res.ActParam == "" || Res.Req.ExpectParams == "" {

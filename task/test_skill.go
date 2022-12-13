@@ -722,7 +722,7 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 			}
 			Res.FailReason = "intent槽位未命中"
 			Res.Developer = JacksonZhang
-			if strings.Contains("weather_new stock compute dance_action joke system", Res.Req.ExpectDomain) {
+			if strings.Contains("weather_new stock compute joke system", Res.Req.ExpectDomain) {
 				Res.FailReason = "实体树问题"
 				Res.Developer = KevinRen
 				return

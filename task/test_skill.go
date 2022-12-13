@@ -700,7 +700,7 @@ func (Skill *SkillTask) tagToDeveloper(Res *SkillTaskOnceResp) {
 			} else {
 				Res.FailReason = "槽位未识别导致intent模型未识别导致domain未识别"
 			}
-			if Res.Req.ExpectDomain == "music" {
+			if strings.Contains("music poetry story", Res.Req.ExpectDomain) {
 				Res.Developer = JacksonZhang
 			} else {
 				Res.Developer = MikeLuo

@@ -45,6 +45,7 @@ type TestConfig struct {
 	TestConfigKG    *KGTaskConfig    `json:"config_kg,omitempty" form:"config_kg,omitempty"` // 知识图谱
 	TestConfigQA    *QATaskConfig    `json:"config_qa,omitempty" form:"config_qa,omitempty"`
 	TestConfigSkill *SkillTaskConfig `json:"config_skill,omitempty" form:"config_skill,omitempty"`
+	TestConfigASR   *ASRTaskConfig   `json:"config_asr,omitempty" form:"config_asr,omitempty"`
 }
 
 type ReportString struct {
@@ -63,6 +64,8 @@ type TestDataSource struct {
 	TestCaseSkill   []*SkillTaskReq  `json:"cases_skill,omitempty" form:"cases_skill,omitempty"`
 	SkillDataSource *SkillDataSource `json:"source_skill,omitempty" form:"source_skill,omitempty"`
 	SkillExcel      *Excel           `json:"excel_skill,omitempty" form:"excel_skill,omitempty"`
+
+	ASRDataSource *ASRDataSource `json:"source_asr,omitempty" form:"source_asr,omitempty"`
 }
 
 func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
@@ -121,6 +124,19 @@ func JsonToStruct(j *models.TaskPlanBase) (*AddTask, error) {
 			TestCaseSkill:   make([]*SkillTaskReq, 0),
 			SkillDataSource: &SkillDataSource{},
 			SkillExcel:      &Excel{},
+		}
+		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
+		if err != nil {
+			return nil, err
+		}
+	case CommonASR:
+		s.TaskConfig = &TestConfig{TestConfigASR: &ASRTaskConfig{}}
+		err := json.Unmarshal([]byte(j.TaskConfig), s.TaskConfig)
+		if err != nil {
+			return nil, err
+		}
+		s.TaskDataSource = &TestDataSource{
+			ASRDataSource: &ASRDataSource{},
 		}
 		err = json.Unmarshal([]byte(j.TaskDataSource), &s.TaskDataSource)
 		if err != nil {
@@ -195,6 +211,15 @@ func InitTaskModel(config *AddTask) TaskModel {
 			Skill = &SkillTaskTest{SkillTask: NewSkillTask(SkillConfig, ExcelSkillReader(config.TaskDataSource.SkillExcel.FileName, config.TaskDataSource.SkillExcel.SheetName), nil)}
 		}
 		return Skill
+	case CommonASR:
+		var ASR TaskModel = &ASRTask{}
+		ASRConfig := config.TaskConfig.TestConfigASR
+
+		switch config.TaskDataSourceLabel {
+		case CommonASRSource:
+			ASR = &ASRTaskTest{ASRTask: NewASRTask(ASRConfig, make([]*ASRTaskReq, 0), config.TaskDataSource.ASRDataSource)}
+		}
+		return ASR
 	}
 	return nil
 }
@@ -212,4 +237,6 @@ var (
 	SystemSkillSource    = "source_skill"
 	SystemSkillCases     = "cases_skill"
 	SystemSkillExcel     = "excel_skill"
+	CommonASR            = "asr"
+	CommonASRSource      = "source_asr"
 )

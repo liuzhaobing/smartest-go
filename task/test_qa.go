@@ -278,7 +278,7 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 	r := &talk.TalkRequest{
 		IsFull:     true,
 		AgentID:    QA.QAConfig.AgentId,
-		SessionID:  "QATest",
+		SessionID:  Res.Res.TraceId,
 		QuestionID: Res.Res.TraceId,
 		EventType:  talk.Text,
 		EnvInfo:    make(map[string]string),

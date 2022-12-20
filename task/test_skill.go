@@ -363,7 +363,7 @@ func (Skill *SkillTask) call(conn *grpc.ClientConn, req *SkillTaskReq) *SkillTas
 	if req.RobotID != "" {
 		r.SessionID = req.RobotID
 	}
-	if 1 == 1 {
+	if 1 == 2 {
 		if req.RobotID != "" {
 			r.RobotID = req.RobotID
 			r.SessionID = req.RobotID

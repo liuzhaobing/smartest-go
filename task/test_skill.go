@@ -74,6 +74,7 @@ type SkillTaskRes struct { // 从响应体收集到的数据
 	EntityTrie      string
 	NERTrie         string
 	TraceId         string
+	UrlCheckResult  string
 }
 
 type SkillTaskOnceResp struct {
@@ -126,6 +127,7 @@ type SkillResults struct {
 	AssignReason    string  `json:"assign_reason,omitempty"      bson:"assign_reason,omitempty"`
 	FixDeveloper    string  `json:"fix_developer,omitempty"      bson:"fix_developer,omitempty"`
 	BugStatus       string  `json:"bug_status,omitempty"      bson:"bug_status,omitempty"`
+	UrlCheckResult  string  `json:"url_check_result,omitempty"  bson:"url_check_result,omitempty"`
 }
 
 type SkillTask struct {
@@ -297,6 +299,7 @@ func (Skill *SkillTask) run() {
 			AssignReason:    "",
 			FixDeveloper:    "",
 			BugStatus:       resp.BugStatus,
+			UrlCheckResult:  resp.Res.UrlCheckResult,
 		})
 	}
 	models.ReporterDB.MongoInsertMany(SkillResultsTable, SkillResultList)
@@ -444,6 +447,9 @@ func (Skill *SkillTask) getSkillResponseData(resp *talk.TalkResponse, Res *Skill
 		}
 		if tt.Action.Param.Url != "" {
 			Res.MusicUrl = tt.Action.Param.Url
+			if 1 == 1 {
+				Res.UrlCheckResult = checkMusicUrl(Res.MusicUrl)
+			}
 		}
 		if tt.Action.Param.PicUrl != "" {
 			Res.PicUrl = tt.Action.Param.PicUrl

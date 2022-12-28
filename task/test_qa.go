@@ -278,7 +278,7 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 	r := &talk.TalkRequest{
 		IsFull:     true,
 		AgentID:    QA.QAConfig.AgentId,
-		SessionID:  Res.Res.TraceId,
+		SessionID:  uuid.New().String() + "@cloudminds-test.com",
 		QuestionID: Res.Res.TraceId,
 		EventType:  talk.Text,
 		EnvInfo:    make(map[string]string),
@@ -290,6 +290,15 @@ func (QA *QATask) call(conn *grpc.ClientConn, req *QATaskReq) *QATaskOnceResp {
 			Lang: "ZH",
 			Text: req.Query,
 		},
+	}
+
+	// 设置实际机型
+	if req.RobotType != "" { // 用例中有机型要求 则设置指定机型 否则设置默认机型为ginger
+		r.RobotID = QA.QAConfig.RobotID
+		r.EnvInfo["devicetype"] = req.RobotType
+	} else {
+		r.RobotID = "123456"
+		r.EnvInfo["devicetype"] = "ginger"
 	}
 
 	startReq := time.Now()

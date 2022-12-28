@@ -360,19 +360,19 @@ func (Skill *SkillTask) call(conn *grpc.ClientConn, req *SkillTaskReq) *SkillTas
 	}
 
 	// 设置实际机型
-	r.EnvInfo["devicetype"] = req.RobotType
+	if req.RobotType != "" { // 用例中有机型要求 则设置指定机型 否则设置默认机型为ginger
+		r.RobotID = Skill.SkillConfig.RobotID
+		r.EnvInfo["devicetype"] = req.RobotType
+	} else {
+		r.RobotID = "123456"
+		r.EnvInfo["devicetype"] = "ginger"
+	}
 
 	// 设置多轮
-	if req.RobotID != "" {
+	if req.RobotID != "" { // 用例中有多轮继承要求 则设置指定sessionID 否则设置随机的sessionID
 		r.SessionID = req.RobotID
-	}
-	if 1 == 2 {
-		if req.RobotID != "" {
-			r.RobotID = req.RobotID
-			r.SessionID = req.RobotID
-		} else {
-			r.RobotID = Res.Res.TraceId
-		}
+	} else {
+		r.SessionID = uuid.New().String() + "@cloudminds-test.com"
 	}
 
 	// 设置测试模式

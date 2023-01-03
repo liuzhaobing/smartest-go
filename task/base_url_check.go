@@ -6,8 +6,14 @@ import (
 )
 
 func checkMusicUrl(url string) string {
-	req, _ := http.NewRequest("GET", url, nil)
-	res, _ := http.DefaultClient.Do(req)
-	defer res.Body.Close()
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fmt.Sprintf(`{"error":%s}`, err.Error())
+	}
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Sprintf(`{"error":%s}`, err.Error())
+	}
+	res.Body.Close()
 	return fmt.Sprintf(`{"status_code":%d}`, res.StatusCode)
 }

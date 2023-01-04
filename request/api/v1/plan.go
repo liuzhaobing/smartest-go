@@ -285,7 +285,7 @@ func TerminatePlan(context *gin.Context) {
 
 func GetPlanGroups(context *gin.Context) {
 	model := models.NewTaskPlanModel()
-	results, _ := model.GetGroupTaskPlan(`SELECT task_group, count(1) as total FROM plans GROUP BY task_group`)
+	results, _ := model.GetGroupTaskPlan(`SELECT task_group, count(1) as total FROM plans GROUP BY task_group ORDER BY total DESC`)
 	var groups []string
 	if results == nil {
 		app.SuccessRespByCode(context, e.SUCCESS, groups)

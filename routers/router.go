@@ -103,6 +103,7 @@ func InitRouter() *gin.Engine {
 		apiPlan.POST("/:id", v1.RunPlan)
 		apiPlan.PUT("", Validation(&task.NameOfTask{}), v1.TerminatePlan)
 	}
+	apiV1.GET("/groups", v1.GetPlanGroups)
 
 	apiHistory := apiV1.Group("/history")
 	apiHistory.Use()

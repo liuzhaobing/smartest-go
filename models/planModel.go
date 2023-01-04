@@ -82,3 +82,20 @@ func (a *TaskPlanBase) DeleteTaskPlan(id int64) error {
 	tx := GetSessionTx(a.Session)
 	return tx.Where("id = ?", id).Delete(TaskPlanBase{}).Error
 }
+
+// GetGroupTaskPlan group by result based on constrains
+func (a *TaskPlanBase) GetGroupTaskPlan(sql string, values ...interface{}) ([]*SkillGroupResult, error) {
+	tx := GetSessionTx(a.Session)
+	var res []*SkillGroupResult
+	result, err := tx.Raw(sql, values...).Rows()
+	if err != nil {
+		return nil, err
+	}
+	for result.Next() {
+		result.Scan()
+		var col = &SkillGroupResult{}
+		result.Scan(&col.SkillCn, &col.Count)
+		res = append(res, col)
+	}
+	return res, nil
+}

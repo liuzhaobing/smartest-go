@@ -109,7 +109,7 @@ type KGTaskOnceResp struct {
 // KGResults 存储kg测试结果的MongoDB表结构
 type KGResults struct {
 	JobInstanceId string `bson:"job_instance_id"`
-	Id            int64  `bson:"id"`
+	Id            int64  `bson:"id,omitempty"`
 	Question      string `bson:"question"`
 	Answer        string `bson:"answer"`
 	ActAnswer     string `bson:"act_answer"`

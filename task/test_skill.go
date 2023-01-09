@@ -101,7 +101,7 @@ type SkillResults struct {
 	ActDomain       string  `json:"act_domain,omitempty"      bson:"act_domain,omitempty"`
 	Intent          string  `json:"intent,omitempty"      bson:"intent,omitempty"`
 	ActIntent       string  `json:"act_intent,omitempty"      bson:"act_intent,omitempty"`
-	IsPass          bool    `json:"is_pass,omitempty"      bson:"is_pass,omitempty"`
+	IsPass          bool    `json:"is_pass"      bson:"is_pass"`
 	ActIntentTTS    string  `json:"act_intent_tts,omitempty"      bson:"act_intent_tts,omitempty"`
 	IsSmoke         int     `json:"is_smoke,omitempty"      bson:"is_smoke,omitempty"`
 	ExpectParams    string  `json:"expect_params,omitempty"      bson:"expect_params,omitempty"`
@@ -109,7 +109,7 @@ type SkillResults struct {
 	Cost            int64   `json:"edg_cost,omitempty"      bson:"edg_cost,omitempty"`
 	ParamInfo       string  `json:"paraminfo,omitempty"      bson:"paraminfo,omitempty"`
 	ActParamInfo    string  `json:"act_param_info,omitempty"      bson:"act_param_info,omitempty"`
-	ParamInfoIsPass bool    `json:"param_info_is_pass,omitempty"      bson:"param_info_is_pass,omitempty"`
+	ParamInfoIsPass bool    `json:"param_info_is_pass"      bson:"param_info_is_pass"`
 	AnswerString    string  `json:"answer_string,omitempty"      bson:"answer_string,omitempty"`
 	AnswerUrl       string  `json:"answer_url,omitempty"      bson:"answer_url,omitempty"`
 	CaseVersion     float32 `json:"case_version,omitempty"      bson:"case_version,omitempty"`

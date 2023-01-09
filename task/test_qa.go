@@ -64,24 +64,24 @@ type QATaskOnceResp struct {
 
 // QAResults 存储qa测试结果的MongoDB表结构
 type QAResults struct {
-	JobInstanceId string  `bson:"job_instance_id"`  //
-	Id            int64   `bson:"id"`               // 用例编号
-	Question      string  `bson:"question"`         // 测试语句
-	Answer        string  `bson:"exp_answer"`       // 期望回复
-	ActAnswer     string  `bson:"act_answer"`       // 实际回复
-	IsPass        bool    `bson:"is_pass"`          // 是否通过
-	Source        string  `bson:"source"`           // 回复命中类型
-	GroupID       int64   `bson:"exp_group_id"`     // 期望GroupId
-	ActGroupID    int64   `bson:"act_group_id"`     // 实际GroupId
-	IsGroupIDPass bool    `bson:"is_group_id_pass"` // GroupId是否匹配
-	IsFullPass    bool    `bson:"is_full_pass"`     // 是否完全匹配
-	Algo          string  `bson:"algo"`             // 命中算法类型
-	AlgoScore     float64 `bson:"algo_score"`       // 算法得分score
-	EdgCost       int64   `bson:"edg_cost"`         // 端测耗时(ms)
-	ExecuteTime   int64   `bson:"execute_time"`     // 此条用例运行时间点
-	TaskName      string  `bson:"task_name"`        // 测试计划名
-	TraceId       string  `bson:"trace_id"`         // TraceID
-	IsSmoke       int     `bson:"is_smoke"`         //
+	JobInstanceId string  `bson:"job_instance_id"`        //
+	Id            int64   `bson:"id,omitempty"`           // 用例编号
+	Question      string  `bson:"question"`               // 测试语句
+	Answer        string  `bson:"exp_answer"`             // 期望回复
+	ActAnswer     string  `bson:"act_answer"`             // 实际回复
+	IsPass        bool    `bson:"is_pass"`                // 是否通过
+	Source        string  `bson:"source"`                 // 回复命中类型
+	GroupID       int64   `bson:"exp_group_id,omitempty"` // 期望GroupId
+	ActGroupID    int64   `bson:"act_group_id,omitempty"` // 实际GroupId
+	IsGroupIDPass bool    `bson:"is_group_id_pass"`       // GroupId是否匹配
+	IsFullPass    bool    `bson:"is_full_pass"`           // 是否完全匹配
+	Algo          string  `bson:"algo"`                   // 命中算法类型
+	AlgoScore     float64 `bson:"algo_score"`             // 算法得分score
+	EdgCost       int64   `bson:"edg_cost"`               // 端测耗时(ms)
+	ExecuteTime   int64   `bson:"execute_time"`           // 此条用例运行时间点
+	TaskName      string  `bson:"task_name"`              // 测试计划名
+	TraceId       string  `bson:"trace_id"`               // TraceID
+	IsSmoke       int     `bson:"is_smoke,omitempty"`     //
 }
 
 type QATask struct {
